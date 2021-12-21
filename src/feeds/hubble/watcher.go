@@ -35,6 +35,7 @@ func GetWatchLogs() {
 	//health check or  try to connect until its connected
 	for uptime, _ := checkServerUptime(client); uptime == 0; {
 		log.Info().Msg("Trying to reconnect to hubble relay server and get a observerclient.")
+		//Connect hubble client observer
 		client = observer.NewObserverClient(connection)
 		uptime, _ = checkServerUptime(client)
 		time.Sleep(1 * time.Second)
@@ -57,10 +58,10 @@ func GetWatchLogs() {
 
 }
 
-//isLogServiceServerHealthy - Health check of connection
+//checkServerUptime - Health check of connection
 func checkServerUptime(client observer.ObserverClient) (uint64, error) {
 	log.Info().Msg("CheckServerUptime  method starts ")
-
+	//Checking hubble observer server status
 	status, err := client.ServerStatus(context.Background(), &observer.ServerStatusRequest{})
 	log.Info().Msg("Hubble server Status  : " + fmt.Sprint(status))
 	if err != nil {

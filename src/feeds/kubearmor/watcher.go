@@ -13,7 +13,7 @@ import (
 func dialToKubeArmorService() (*grpc.ClientConn, error) {
 	//address to connect KubeArmor Service
 	address := viper.GetString("kubeArmor.url") + ":" + viper.GetString("kubeArmor.port")
-	fmt.Println("Address : ", address)
+	//Connecting client on given target address
 	connection, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
 		log.Error().Msg("Error while connecting to grpc " + err.Error())
@@ -30,9 +30,9 @@ func GetWatchLogs() {
 		return
 	}
 	defer connection.Close()
-
+	//Connect kubearmor log service client
 	client := kubearmor.NewLogServiceClient(connection)
-	//health check or  try to connect until its connected
+	//health check or try to connect until its connected
 	for healthCheck := HealthCheck(client); !healthCheck; {
 		log.Info().Msg("Trying to connect to kubearmor service and get a log service client.")
 		client = kubearmor.NewLogServiceClient(connection)
@@ -59,13 +59,13 @@ func GetWatchLogs() {
 
 //HealthCheck - Health check of connection
 func HealthCheck(client kubearmor.LogServiceClient) bool {
-	log.Info().Msg(" IsLogServiceServerHealthy method starts ")
+	log.Info().Msg("HealthCheck method starts ")
 
 	value := int32(57684)
 	arg := &kubearmor.NonceMessage{
 		Nonce: value,
 	}
-
+	//Checking client healthcheck
 	healthCheck, err := client.HealthCheck(context.Background(), arg)
 	if err != nil {
 		log.Error().Msg("The connection is not successful!")
