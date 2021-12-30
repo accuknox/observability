@@ -6,6 +6,7 @@ import (
 
 	"github.com/accuknox/observability/src/feeds/hubble"
 	"github.com/accuknox/observability/src/feeds/kubearmor"
+	"github.com/accuknox/observability/utils/database"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -18,11 +19,12 @@ func main() {
 	flag.Parse()
 
 	loadConfig()
-
+	setDatabase()
 	wg.Add(1)
 	go kubearmor.GetWatchLogs()
 	go hubble.GetWatchLogs()
 	wg.Wait()
+
 }
 
 // loadConfig - Load the config parameters
@@ -37,4 +39,8 @@ func loadConfig() {
 			log.Panic().Msgf("Error reading config file: %s\n", readErr)
 		}
 	}
+}
+
+func setDatabase() {
+	database.ConnectDB()
 }
