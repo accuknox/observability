@@ -2,6 +2,7 @@ package hubble
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/accuknox/observability/utils/constants"
@@ -74,7 +75,7 @@ func GetWatchLogs() {
 			log.Error().Msg("Error in receiving hubble log " + err.Error())
 			return
 		}
-		// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
+		fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 		var getFlow *flow.Flow
 		getFlow = hubbleLog.GetFlow()
 		if getFlow != nil {

@@ -157,9 +157,52 @@ const (
 	UPDATE_CILIUM = `UPDATE cilium_logs SET total = total+1,updated_time = ?  where id = ?`
 
 	UPDATE_KUBEARMOR = `UPDATE kubearmor_logs SET total = total+1,updated_time = ?  where id = ?`
-)
 
-//Basic Constant
-const (
-	STATUS = "Passed"
+	SELECT_ALL_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,uid,type,source,operation,resource,data,start_time,updated_time,total FROM kubearmor_logs`
+
+	SELECT_HostName_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE host_name in (?)`
+
+	SELECT_Namespace_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE namespace_name in (?)`
+
+	SELECT_Pod_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE pod_name in (?)`
+
+	SELECT_Container_ID_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE container_id in (?)`
+
+	SELECT_Container_Name_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE container_name in (?)`
+
+	SELECT_UID_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE uid in (?)`
+
+	SELECT_type_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE type in (?)`
+
+	SELECT_Source_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE source in (?)`
+
+	SELECT_Operation_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE operation in (?)`
+
+	SELECT_Resource_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE resource in (?)`
+
+	SELECT_Data_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
+	container_id,container_name,total FROM kubearmor_logs WHERE data  in (?)`
+
+	SELECT_ALL_CILIUM = `SELECT verdict,ethernet_source,ethernet_destination,ip_source,ip_destination,
+	ip_version,ip_encrypted,l4_tcp_source_port,l4_tcp_destination_port,l4_udp_source_port,l4_udp_destination_port,
+	l4_icmpv4_type,l4_icmpv4_code,l4_icmpv6_type,l4_icmpv6_code,source_id,source_identity,source_namespace,
+	source_labels,source_pod_name,destination_id,destination_identity,destination_namespace,destination_labels,
+	destination_pod_name,type,node_name,source_names,destination_names,l7_type,l7_latency_ns,l7_dns_query,
+	l7_dns_ips,l7_dns_ttl,l7_dns_cnames,l7_dns_observation_source,l7_dns_rcode,l7_dns_qtypes,l7_dns_rrtypes,
+	l7_http_code,l7_http_method,l7_http_url,l7_http_protocol,l7_http_headers,l7_kafka_error_code,l7_kafka_api_version,
+	l7_kafka_api_key,l7_kafka_correlation_id,l7_kafka_topic,event_type_type,event_type_sub_type,source_service_name,
+	source_service_namespace,destination_service_name,destination_service_namespace,traffic_direction,policy_match_type,
+	trace_observation_point,drop_reason_desc,is_reply,debug_capture_point,interface_index,interface_name,proxy_port,
+	start_time,updated_time,total from cilium_logs`
 )
