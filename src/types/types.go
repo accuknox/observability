@@ -16,6 +16,7 @@ type KubeArmor struct {
 	Data          string `json:"data,omitempty"`
 	StartTime     int64  `json:"start_time,omitempty"`
 	UpdatedTime   int64  `json:"updated_time,omitempty"`
+	Result        string `json:"result,omitempty"`
 	Total         int64  `json:"total,omitempty"`
 }
 

@@ -7,3 +7,6 @@ kubeArmor:
 cilium:
   url: 127.0.0.1
   port: 4245
+  
+logging:
+  level: "INFO"

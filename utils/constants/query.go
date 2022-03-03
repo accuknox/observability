@@ -99,12 +99,13 @@ const (
 		"data" TEXT,
 		"start_time" INTEGER,
 		"updated_time" INTEGER,
+		"result" TEXT,
 		"total" INTEGER		
 				
   	)`
 	INSERT_KUBEARMOR = `INSERT INTO kubearmor_logs (cluster_name,host_name,namespace_name,
 		pod_name,container_id,container_name,uid,type,source,operation,
-		resource,data,start_time,updated_time,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`
+		resource,data,start_time,updated_time,result,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`
 	INSERT_CILIUM = `INSERT INTO cilium_logs (verdict,ethernet_source,ethernet_destination,
 		ip_source,ip_destination,ip_version,ip_encrypted,
 		l4_tcp_source_port,l4_tcp_destination_port,
@@ -132,7 +133,7 @@ const (
 
 	SELECT_KUBEARMOR = `SELECT ID FROM kubearmor_logs WHERE cluster_name = ? and host_name = ? and namespace_name = ? and 
 	pod_name = ? and container_id = ? and container_name = ? and uid = ? and type = ? and source = ? and operation = ? and 
-	resource = ? and data  = ?`
+	resource = ? and data  = ? and result = ?`
 
 	SELECT_CILIUM = `SELECT ID FROM cilium_logs WHERE verdict = ? and ethernet_source = ? and ethernet_destination = ? and 
 		ip_source = ? and ip_destination = ? and ip_version = ? and ip_encrypted = ? and 
@@ -159,7 +160,7 @@ const (
 	UPDATE_KUBEARMOR = `UPDATE kubearmor_logs SET total = total+1,updated_time = ?  where id = ?`
 
 	SELECT_ALL_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
-	container_id,container_name,uid,type,source,operation,resource,data,start_time,updated_time,total FROM kubearmor_logs`
+	container_id,container_name,uid,type,source,operation,resource,data,start_time,updated_time,result,total FROM kubearmor_logs`
 
 	SELECT_HostName_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
 	container_id,container_name,total FROM kubearmor_logs WHERE host_name in (?)`

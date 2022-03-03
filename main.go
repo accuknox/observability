@@ -1,48 +1,45 @@
 package main
 
 import (
-	"flag"
-	"sync"
+	"net"
 
-	"github.com/accuknox/observability/src/cmd"
+	libs "github.com/accuknox/observability/src/libs"
+	logger "github.com/accuknox/observability/src/logger"
+	grpcserver "github.com/accuknox/observability/src/server"
 	"github.com/accuknox/observability/utils/database"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
-var configFilePath *string
-var wg sync.WaitGroup
+// var wg sync.WaitGroup
+var log *zerolog.Logger = logger.GetInstance()
+
+func init() {
+	libs.LoadConfig()
+	logger.SetLogLevel(viper.GetString("logging.level"))
+	// log = logger.GetInstance()
+	database.ConnectDB()
+}
 
 func main() {
-	configFilePath = flag.String("config-path", "config/", "config/")
-	flag.Parse()
-
-	loadConfig()
-	setDatabase()
 
 	// wg.Add(1)
 	// go kubearmor.GetWatchLogs()
 	// go hubble.GetWatchLogs()
 
 	// wg.Wait()
-	cmd.Execute()
+	// cmd.Execute()
 
-}
-
-// loadConfig - Load the config parameters
-func loadConfig() {
-	viper.SetConfigName("app")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(*configFilePath)
-	if err := viper.ReadInConfig(); err != nil {
-		if readErr, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Panic().Msgf("No config file found at %s\n", *configFilePath)
-		} else {
-			log.Panic().Msgf("Error reading config file: %s\n", readErr)
-		}
+	//Create Server
+	listen, err := net.Listen("tcp", ":"+grpcserver.PortNumber)
+	if err != nil {
+		log.Error().Msgf("gRPC server failed to listen : %v", err)
 	}
-}
 
-func setDatabase() {
-	database.ConnectDB()
+	server := grpcserver.GetNewServer()
+	//Start service
+	log.Info().Msgf("gRPC server on %s port started", grpcserver.PortNumber)
+	if err := server.Serve(listen); err != nil {
+		log.Error().Msgf("Failed to serve: %v", err)
+	}
 }
