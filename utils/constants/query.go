@@ -4,12 +4,12 @@ package constants
 const (
 	CREATE_CILIUM_TABLE = `CREATE TABLE if not exists cilium_logs (
 		"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,		
-		"verdict" INTEGER,
+		"verdict" TEXT,
 		"ethernet_source" TEXT,
 		"ethernet_destination" TEXT,
 		"ip_source" TEXT,
 		"ip_destination" TEXT,
-		"ip_version" INTEGER,
+		"ip_version" TEXT,
 		"ip_encrypted" BOOLEAN,
 		"l4_tcp_source_port" INTEGER,
 		"l4_tcp_destination_port" INTEGER,
@@ -29,12 +29,12 @@ const (
 		"destination_namespace" TEXT,
 		"destination_labels" TEXT,
 		"destination_pod_name" TEXT,
-		"type" INTEGER,
+		"type" TEXT,
 		"node_name" TEXT,
 		"source_names" TEXT,
 		"destination_names" TEXT,
 
-		"l7_type" INTEGER,
+		"l7_type" TEXT,
 		"l7_latency_ns" INTEGER,
 		
 		"l7_dns_query" TEXT,
@@ -65,16 +65,16 @@ const (
 		"source_service_namespace" TEXT,
 		"destination_service_name" TEXT,
 		"destination_service_namespace" TEXT,
-		"traffic_direction" INTEGER,
+		"traffic_direction" TEXT,
 
 		"policy_match_type" INTEGER,
 
-		"trace_observation_point" INTEGER,
+		"trace_observation_point" TEXT,
 
 		"drop_reason_desc" INTEGER,
 		
 		"is_reply" BOOLEAN,
-		"debug_capture_point" INTEGER,
+		"debug_capture_point" TEXT,
 		"interface_index" INTEGER,
 		"interface_name" TEXT,
 		"proxy_port" INTEGER,
@@ -161,6 +161,10 @@ const (
 
 	SELECT_ALL_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
 	container_id,container_name,uid,type,source,operation,resource,data,start_time,updated_time,result,total FROM kubearmor_logs`
+
+	SELECT_COUNT_KUBEARMOR = `SELECT count(id) from kubearmor_logs`
+
+	SELECT_COUNT_CILIUM = `SELECT count(id) from cilium_logs`
 
 	SELECT_HostName_KUBEARMOR = `SELECT cluster_name,host_name,namespace_name,pod_name,
 	container_id,container_name,total FROM kubearmor_logs WHERE host_name in (?)`

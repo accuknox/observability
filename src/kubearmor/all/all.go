@@ -1,7 +1,6 @@
 package all
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/accuknox/observability/src/types"
@@ -25,7 +24,6 @@ func All(option types.KubeArmorFilter, limit int) ([]types.KubeArmor, error) {
 		//query to fetch all logs with limit
 		query = query + constants.LIMIT + strconv.Itoa(limit)
 	}
-	fmt.Println("Query : ", query)
 	//Fetch rows
 	rows, err := database.ConnectDB().Query(query)
 	if err != nil {

@@ -25,7 +25,7 @@ const (
 	VERDICT               = `verdict = `
 	TYPE                  = `type = `
 	TRAFFIC_DIRECTION     = `traffic_direction = `
-	ORDER_BY_UPDATED_TIME = ` order by updated_time DESC `
+	ORDER_BY_UPDATED_TIME = ` order by updated_time DESC`
 )
 
 //Error Constant

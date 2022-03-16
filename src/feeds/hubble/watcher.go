@@ -99,7 +99,6 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 	// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 	var getFlow *flow.Flow = hubbleLog.GetFlow()
 	if getFlow != nil {
-
 		// l2
 		var ethernet flow.Ethernet
 		//Check ethernet exist
@@ -149,6 +148,7 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 
 		//l7
 		var l7 flow.Layer7
+		var l7Type string
 		var l7DNS flow.DNS
 		var l7HTTP flow.HTTP
 		var l7Kafka flow.Kafka
@@ -156,6 +156,7 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 		//Check l7 exist
 		if getFlow.L7 != nil {
 			l7 = *getFlow.GetL7()
+			l7Type = l7.GetType().Enum().String()
 			//Check DNS exist
 			if l7.GetDns() != nil {
 				l7DNS = *l7.GetDns()
@@ -209,10 +210,21 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 		if getFlow.Interface != nil {
 			networkinterface = *getFlow.Interface
 		}
+
+		var dropReason string
+		//Check Verdict is Dropped
+		if getFlow.GetVerdict().Enum().String() == "DROPPED" {
+			dropReason = getFlow.GetDropReasonDesc().Enum().String()
+		}
+		var debugCapturePoint string
+		//Check debugCapturePoint exist
+		if getFlow.GetDebugCapturePoint() != 0 {
+			debugCapturePoint = getFlow.GetDebugCapturePoint().Enum().String()
+		}
 		//Select Query to fetch ID
-		row := database.ConnectDB().QueryRow(constants.SELECT_CILIUM, getFlow.Verdict,
+		row := database.ConnectDB().QueryRow(constants.SELECT_CILIUM, getFlow.GetVerdict().Enum().String(),
 			ethernet.Source, ethernet.Destination,
-			ip.Source, ip.Destination, ip.IpVersion, ip.Encrypted,
+			ip.Source, ip.Destination, ip.GetIpVersion().Enum().String(), ip.Encrypted,
 			l4TCP.SourcePort,
 			l4TCP.DestinationPort,
 			l4UDP.SourcePort,
@@ -223,11 +235,11 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 			l4ICMPv6.Code,
 			source.ID, source.Identity, source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
 			destination.ID, destination.Identity, destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
-			getFlow.Type,
+			getFlow.GetType().Enum().String(),
 			getFlow.NodeName,
 			wrapper.ConvertArrayToString(getFlow.SourceNames),
 			wrapper.ConvertArrayToString(getFlow.DestinationNames),
-			l7.Type,
+			l7Type,
 			l7.LatencyNs,
 			l7DNS.Query,
 			wrapper.ConvertArrayToString(l7DNS.Ips),
@@ -250,12 +262,12 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 			eventType, eventSubType,
 			sourceService.Name, sourceService.Namespace,
 			destinationService.Name, destinationService.Namespace,
-			getFlow.TrafficDirection,
+			getFlow.GetTrafficDirection().Enum().String(),
 			getFlow.PolicyMatchType,
-			getFlow.TraceObservationPoint,
-			getFlow.DropReasonDesc,
+			getFlow.GetTraceObservationPoint().Enum().String(),
+			dropReason,
 			isReply.Value,
-			getFlow.DebugCapturePoint,
+			debugCapturePoint,
 			networkinterface.Index, networkinterface.Name,
 			getFlow.ProxyPort)
 		if err != nil {
@@ -284,10 +296,11 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 				log.Error().Msg("Error in Prepare Cilium Insert statement: " + err.Error())
 				return
 			}
+
 			//Execute the insert query statement
-			statement.Exec(getFlow.Verdict,
+			statement.Exec(getFlow.GetVerdict().Enum().String(),
 				ethernet.Source, ethernet.Destination,
-				ip.Source, ip.Destination, ip.IpVersion, ip.Encrypted,
+				ip.Source, ip.Destination, ip.GetIpVersion().Enum().String(), ip.Encrypted,
 				l4TCP.SourcePort,
 				l4TCP.DestinationPort,
 				l4UDP.SourcePort,
@@ -298,11 +311,11 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 				l4ICMPv6.Code,
 				source.ID, source.Identity, source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
 				destination.ID, destination.Identity, destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
-				getFlow.Type,
+				getFlow.GetType().Enum().String(),
 				getFlow.NodeName,
 				wrapper.ConvertArrayToString(getFlow.SourceNames),
 				wrapper.ConvertArrayToString(getFlow.DestinationNames),
-				l7.Type,
+				l7Type,
 				l7.LatencyNs,
 				l7DNS.Query,
 				wrapper.ConvertArrayToString(l7DNS.Ips),
@@ -325,12 +338,12 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 				eventType, eventSubType,
 				sourceService.Name, sourceService.Namespace,
 				destinationService.Name, destinationService.Namespace,
-				getFlow.TrafficDirection,
+				getFlow.GetTrafficDirection().Enum().String(),
 				getFlow.PolicyMatchType,
-				getFlow.TraceObservationPoint,
-				getFlow.DropReasonDesc,
+				getFlow.GetTraceObservationPoint().Enum().String(),
+				dropReason,
 				isReply.Value,
-				getFlow.DebugCapturePoint,
+				debugCapturePoint,
 				networkinterface.Index, networkinterface.Name,
 				getFlow.ProxyPort,
 				getFlow.Time.Seconds, getFlow.Time.Seconds)

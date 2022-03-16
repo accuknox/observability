@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/accuknox/observability/src/feeds/hubble"
+	"github.com/accuknox/observability/src/feeds/kubearmor"
 	logger "github.com/accuknox/observability/src/logger"
 	"github.com/rs/zerolog"
 )
@@ -30,10 +31,10 @@ func startConsumer() {
 		return
 	}
 	//Connect KubeArmor Relay client
-	// kubearmorStream, err := kubearmor.GetWatchLogs()
-	// if err != nil {
-	// 	return
-	// }
+	kubearmorStream, err := kubearmor.GetWatchLogs()
+	if err != nil {
+		return
+	}
 
 	run := true
 	for run {
@@ -44,7 +45,7 @@ func startConsumer() {
 		default:
 
 			hubble.FetchLogs(hubbleClient)
-			// kubearmor.FetchLogs(kubearmorStream)
+			kubearmor.FetchLogs(kubearmorStream)
 
 		}
 

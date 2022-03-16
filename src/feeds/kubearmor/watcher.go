@@ -2,7 +2,6 @@ package kubearmor
 
 import (
 	"context"
-	"fmt"
 
 	logger "github.com/accuknox/observability/src/logger"
 	"github.com/accuknox/observability/utils/constants"
@@ -18,7 +17,6 @@ var log *zerolog.Logger = logger.GetInstance()
 func dialToKubeArmorService() (*grpc.ClientConn, error) {
 	//address to connect KubeArmor Service
 	address := viper.GetString("kubeArmor.url") + ":" + viper.GetString("kubeArmor.port")
-	fmt.Println("Address : ", address)
 	//Connecting client on given target address
 	connection, err := grpc.Dial(address, grpc.WithInsecure())
 	if err != nil {
@@ -46,18 +44,11 @@ func GetWatchLogs() (kubearmor.LogService_WatchLogsClient, error) {
 		healthCheck = HealthCheck(client)
 	}
 	//Streaming the KubeArmor Logs
-	stream, err = client.WatchLogs(context.Background(), &kubearmor.RequestMessage{Filter: "all"})
+	stream, err = client.WatchLogs(context.Background(), &kubearmor.RequestMessage{Filter: "system"})
 	if err != nil {
 		log.Error().Msg("Error in watching kubearmor logs " + err.Error())
 		return stream, err
 	}
-	fmt.Println("Stream : ", stream)
-	// for {
-	kLogs, err := stream.Recv()
-	fmt.Println("K logs : ", kLogs)
-	fmt.Println("Error : ", err)
-	// }
-	// }
 	return stream, nil
 }
 
@@ -85,17 +76,13 @@ func HealthCheck(client kubearmor.LogServiceClient) bool {
 }
 
 func FetchLogs(stream kubearmor.LogService_WatchLogsClient) {
-	fmt.Println("Logs in KubeArmor ", stream)
-
 	//Fetch the kubearmor Logs
 	kubearmorLog, err := stream.Recv()
 	if err != nil {
 		log.Error().Msg("Error in receiving kubearmor log " + err.Error())
 		return
 	}
-	fmt.Println("\n\nKubeArmor Logs ===>>> ", kubearmorLog)
-	//Check the logs which is Passed
-	// if kubearmorLog.Result == constants.STATUS {
+	// fmt.Println("\n\nKubeArmor Logs ===>>> ", kubearmorLog)
 	//Select Query to fetch ID
 	row := database.ConnectDB().QueryRow(constants.SELECT_KUBEARMOR, kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
 		kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource,
