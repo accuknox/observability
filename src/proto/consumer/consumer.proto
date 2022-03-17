@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "github.com/accuknox/observability/proto/consumer";
+
+package consumer;
+
+message ConsumerRequest {
+    string feedtype = 1;
+}
+
+message ConsumerResponse {
+    string result = 1;
+}
+
+service Consumer {
+    rpc Start (ConsumerRequest) returns (ConsumerResponse);
+    rpc Stop (ConsumerRequest) returns (ConsumerResponse);
+}
