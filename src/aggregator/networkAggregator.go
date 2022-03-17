@@ -2,8 +2,10 @@ package aggregator
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	agg "github.com/accuknox/observability/src/proto/aggregator"
 	"github.com/accuknox/observability/utils/constants"
@@ -96,7 +98,31 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 	if pbNetworkRequest.DestinationLabel != "" {
 		filterQuery = append(filterQuery, " destination_labels like \"%"+pbNetworkRequest.DestinationLabel+"%\"")
 	}
-	// TODO : Since Filter
+	// Check Since Filter exist
+	if pbNetworkRequest.Since != "" {
+
+		currentTime := time.Now().UTC().Unix()
+
+		givenTime, err := strconv.ParseInt(pbNetworkRequest.Since[:len(pbNetworkRequest.Since)-1], 10, 64)
+		if err != nil {
+			log.Error().Msg("invalid Since filter value : " + pbNetworkRequest.Since)
+			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+		}
+
+		switch pbNetworkRequest.Since[len(pbNetworkRequest.Since)-1:] {
+		case "d":
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*24*60*60))
+		case "h":
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*60*60))
+		case "m":
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*60))
+		case "s":
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)))
+		default:
+			log.Error().Msg("invalid Since filter value : " + pbNetworkRequest.Since[len(pbNetworkRequest.Since)-1:])
+			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+		}
+	}
 
 	//Check Any filter exist
 	if len(filterQuery) != 0 {
@@ -121,7 +147,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 			//query to fetch all logs with limit
 			query = query + constants.LIMIT + strconv.FormatInt(pbNetworkRequest.Limit, 10)
 		}
-
+		fmt.Println("Query : ", query)
 		//Fetch rows
 		rows, err := database.ConnectDB().Query(query)
 		if err != nil {

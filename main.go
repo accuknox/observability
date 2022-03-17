@@ -17,18 +17,10 @@ var log *zerolog.Logger = logger.GetInstance()
 func init() {
 	libs.LoadConfig()
 	logger.SetLogLevel(viper.GetString("logging.level"))
-	// log = logger.GetInstance()
 	database.ConnectDB()
 }
 
 func main() {
-
-	// wg.Add(1)
-	// go kubearmor.GetWatchLogs()
-	// go hubble.GetWatchLogs()
-
-	// wg.Wait()
-	// cmd.Execute()
 
 	//Create Server
 	listen, err := net.Listen("tcp", ":"+grpcserver.PortNumber)

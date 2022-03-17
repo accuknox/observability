@@ -2,8 +2,10 @@ package aggregator
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	logger "github.com/accuknox/observability/src/logger"
 	agg "github.com/accuknox/observability/src/proto/aggregator"
@@ -55,7 +57,31 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 	if len(pbSystemRequest.Container) != 0 {
 		filterQuery = append(filterQuery, " container_name in ("+wrapper.ConvertFilterString(pbSystemRequest.Container)+")")
 	}
-	// TODO : Since Filter
+	// Check Since Filter exist
+	if pbSystemRequest.Since != "" {
+
+		currentTime := time.Now().UTC().Unix()
+
+		givenTime, err := strconv.ParseInt(pbSystemRequest.Since[:len(pbSystemRequest.Since)-1], 10, 64)
+		if err != nil {
+			log.Error().Msg("invalid Since filter value : " + pbSystemRequest.Since)
+			return agg.SystemLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+		}
+
+		switch pbSystemRequest.Since[len(pbSystemRequest.Since)-1:] {
+		case "d": //by Date(s)
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*24*60*60))
+		case "h": //by Hour(s)
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*60*60))
+		case "m": //by Min(s)
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)*60))
+		case "s": //by second(s)
+			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)))
+		default:
+			log.Error().Msg("invalid Since filter value : " + pbSystemRequest.Since[len(pbSystemRequest.Since)-1:])
+			return agg.SystemLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+		}
+	}
 
 	//Check Any filter exist
 	if len(filterQuery) != 0 {
