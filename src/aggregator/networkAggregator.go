@@ -147,7 +147,6 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 			//query to fetch all logs with limit
 			query = query + constants.LIMIT + strconv.FormatInt(pbNetworkRequest.Limit, 10)
 		}
-		fmt.Println("Query : ", query)
 		//Fetch rows
 		rows, err := database.ConnectDB().Query(query)
 		if err != nil {
@@ -158,19 +157,18 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 		for rows.Next() {
 			var netlog agg.NetworkLog
 			//Scan logs
-			if err := rows.Scan(&netlog.Verdict, &netlog.EthernetSource, &netlog.EthernetDestination,
+			if err := rows.Scan(&netlog.Verdict,
 				&netlog.IpSource, &netlog.IpDestination, &netlog.IpVersion, &netlog.IpEncrypted,
 				&netlog.L4TcpSourcePort, &netlog.L4TcpDestinationPort, &netlog.L4UdpSourcePort, &netlog.L4UdpDestinationPort,
 				&netlog.L4Icmpv4Type, &netlog.L4Icmpv4Code, &netlog.L4Icmpv6Type, &netlog.L4Icmpv6Code,
-				&netlog.SourceId, &netlog.SourceIdentity, &netlog.SourceNamespace, &netlog.SourceLabels, &netlog.SourcePodName,
-				&netlog.DestinationId, &netlog.DestinationIdentity, &netlog.DestinationNamespace, &netlog.DestinationLabels, &netlog.DestinationPodName,
-				&netlog.Type, &netlog.NodeName, &netlog.SourceNames, &netlog.DestinationNames, &netlog.L7Type, &netlog.L7LatencyNs,
-				&netlog.L7DnsQuery, &netlog.L7DnsIps, &netlog.L7DnsTtl, &netlog.L7DnsCnames, &netlog.L7DnsObservationSource, &netlog.L7DnsRcode, &netlog.L7DnsQtypes, &netlog.L7DnsRrtypes,
+				&netlog.SourceNamespace, &netlog.SourceLabels, &netlog.SourcePodName,
+				&netlog.DestinationNamespace, &netlog.DestinationLabels, &netlog.DestinationPodName,
+				&netlog.Type, &netlog.NodeName, &netlog.L7Type,
+				&netlog.L7DnsCnames, &netlog.L7DnsObservationSource,
 				&netlog.L7HttpCode, &netlog.L7HttpMethod, &netlog.L7HttpUrl, &netlog.L7HttpProtocol, &netlog.L7HttpHeaders,
-				&netlog.L7KafkaErrorCode, &netlog.L7KafkaApiVersion, &netlog.L7KafkaApiKey, &netlog.L7KafkaCorrelationId, &netlog.L7KafkaTopic,
 				&netlog.EventTypeType, &netlog.EventTypeSubType, &netlog.SourceServiceName, &netlog.SourceServiceNamespace, &netlog.DestinationServiceName, &netlog.DestinationServiceNamespace,
-				&netlog.TrafficDirection, &netlog.PolicyMatchType, &netlog.TraceObservationPoint, &netlog.DropReasonDesc,
-				&netlog.IsReply, &netlog.DebugCapturePoint, &netlog.InterfaceIndex, &netlog.InterfaceName, &netlog.ProxyPort,
+				&netlog.TrafficDirection, &netlog.TraceObservationPoint, &netlog.DropReasonDesc,
+				&netlog.IsReply,
 				&netlog.StartTime, &netlog.UpdatedTime, &netlog.Total); err != nil {
 				log.Error().Msg("Error in Scan network Logs : " + err.Error())
 				return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in scanning network logs table")

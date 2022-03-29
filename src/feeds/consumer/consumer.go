@@ -1,7 +1,6 @@
 package consumer
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/accuknox/observability/src/feeds/hubble"
@@ -55,7 +54,7 @@ func startConsumer() {
 }
 
 func StartConsumer() {
-	fmt.Println("Status in Start Consumer : ", Status)
+	log.Info().Msg("Status in Start Consumer : " + Status)
 	if Status == STATUS_RUNNING {
 		return
 	}
