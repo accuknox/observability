@@ -99,12 +99,6 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 	// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 	var getFlow *flow.Flow = hubbleLog.GetFlow()
 	if getFlow != nil {
-		// l2
-		var ethernet flow.Ethernet
-		//Check ethernet exist
-		if getFlow.Ethernet != nil {
-			ethernet = *getFlow.Ethernet
-		}
 		// l3
 		var ip flow.IP
 		//Check l3 exist
@@ -151,7 +145,6 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 		var l7Type string
 		var l7DNS flow.DNS
 		var l7HTTP flow.HTTP
-		var l7Kafka flow.Kafka
 		var l7HTTPHeaders string
 		//Check l7 exist
 		if getFlow.L7 != nil {
@@ -174,10 +167,6 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 					//convert http Header into string format
 					l7HTTPHeaders = wrapper.ConvertArrayToString(headers)
 				}
-			}
-			//Check Kafka exist
-			if l7.GetKafka() != nil {
-				l7Kafka = *l7.GetKafka()
 			}
 		}
 
@@ -204,26 +193,14 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 		if getFlow.IsReply != nil {
 			isReply = *getFlow.IsReply
 		}
-		//Network Interface
-		var networkinterface flow.NetworkInterface
-		//Check Network Interface exist
-		if getFlow.Interface != nil {
-			networkinterface = *getFlow.Interface
-		}
 
 		var dropReason string
 		//Check Verdict is Dropped
 		if getFlow.GetVerdict().Enum().String() == "DROPPED" {
 			dropReason = getFlow.GetDropReasonDesc().Enum().String()
 		}
-		var debugCapturePoint string
-		//Check debugCapturePoint exist
-		if getFlow.GetDebugCapturePoint() != 0 {
-			debugCapturePoint = getFlow.GetDebugCapturePoint().Enum().String()
-		}
 		//Select Query to fetch ID
 		row := database.ConnectDB().QueryRow(constants.SELECT_CILIUM, getFlow.GetVerdict().Enum().String(),
-			ethernet.Source, ethernet.Destination,
 			ip.Source, ip.Destination, ip.GetIpVersion().Enum().String(), ip.Encrypted,
 			l4TCP.SourcePort,
 			l4TCP.DestinationPort,
@@ -233,43 +210,25 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 			l4ICMPv4.Code,
 			l4ICMPv6.Type,
 			l4ICMPv6.Code,
-			source.ID, source.Identity, source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
-			destination.ID, destination.Identity, destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
+			source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
+			destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
 			getFlow.GetType().Enum().String(),
 			getFlow.NodeName,
-			wrapper.ConvertArrayToString(getFlow.SourceNames),
-			wrapper.ConvertArrayToString(getFlow.DestinationNames),
 			l7Type,
-			l7.LatencyNs,
-			l7DNS.Query,
-			wrapper.ConvertArrayToString(l7DNS.Ips),
-			l7DNS.Ttl,
 			wrapper.ConvertArrayToString(l7DNS.Cnames),
 			l7DNS.ObservationSource,
-			l7DNS.Rcode,
-			wrapper.ConvertArrayToString(l7DNS.Qtypes),
-			wrapper.ConvertArrayToString(l7DNS.Rrtypes),
 			l7HTTP.Code,
 			l7HTTP.Method,
 			l7HTTP.Url,
 			l7HTTP.Protocol,
 			l7HTTPHeaders,
-			l7Kafka.ErrorCode,
-			l7Kafka.ApiVersion,
-			l7Kafka.ApiKey,
-			l7Kafka.CorrelationId,
-			l7Kafka.Topic,
 			eventType, eventSubType,
 			sourceService.Name, sourceService.Namespace,
 			destinationService.Name, destinationService.Namespace,
 			getFlow.GetTrafficDirection().Enum().String(),
-			getFlow.PolicyMatchType,
 			getFlow.GetTraceObservationPoint().Enum().String(),
 			dropReason,
-			isReply.Value,
-			debugCapturePoint,
-			networkinterface.Index, networkinterface.Name,
-			getFlow.ProxyPort)
+			isReply.Value)
 		if err != nil {
 			log.Error().Msg("Error in Select Query from Cilium Log Table : " + err.Error())
 		}
@@ -299,7 +258,6 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 
 			//Execute the insert query statement
 			statement.Exec(getFlow.GetVerdict().Enum().String(),
-				ethernet.Source, ethernet.Destination,
 				ip.Source, ip.Destination, ip.GetIpVersion().Enum().String(), ip.Encrypted,
 				l4TCP.SourcePort,
 				l4TCP.DestinationPort,
@@ -309,43 +267,25 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 				l4ICMPv4.Code,
 				l4ICMPv6.Type,
 				l4ICMPv6.Code,
-				source.ID, source.Identity, source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
-				destination.ID, destination.Identity, destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
+				source.Namespace, wrapper.ConvertArrayToString(source.Labels), source.PodName,
+				destination.Namespace, wrapper.ConvertArrayToString(destination.Labels), destination.PodName,
 				getFlow.GetType().Enum().String(),
 				getFlow.NodeName,
-				wrapper.ConvertArrayToString(getFlow.SourceNames),
-				wrapper.ConvertArrayToString(getFlow.DestinationNames),
 				l7Type,
-				l7.LatencyNs,
-				l7DNS.Query,
-				wrapper.ConvertArrayToString(l7DNS.Ips),
-				l7DNS.Ttl,
 				wrapper.ConvertArrayToString(l7DNS.Cnames),
 				l7DNS.ObservationSource,
-				l7DNS.Rcode,
-				wrapper.ConvertArrayToString(l7DNS.Qtypes),
-				wrapper.ConvertArrayToString(l7DNS.Rrtypes),
 				l7HTTP.Code,
 				l7HTTP.Method,
 				l7HTTP.Url,
 				l7HTTP.Protocol,
 				l7HTTPHeaders,
-				l7Kafka.ErrorCode,
-				l7Kafka.ApiVersion,
-				l7Kafka.ApiKey,
-				l7Kafka.CorrelationId,
-				l7Kafka.Topic,
 				eventType, eventSubType,
 				sourceService.Name, sourceService.Namespace,
 				destinationService.Name, destinationService.Namespace,
 				getFlow.GetTrafficDirection().Enum().String(),
-				getFlow.PolicyMatchType,
 				getFlow.GetTraceObservationPoint().Enum().String(),
 				dropReason,
 				isReply.Value,
-				debugCapturePoint,
-				networkinterface.Index, networkinterface.Name,
-				getFlow.ProxyPort,
 				getFlow.Time.Seconds, getFlow.Time.Seconds)
 
 			defer statement.Close()
