@@ -14,8 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsResponse, error) {
-	var netlogs []*agg.NetworkLog
+func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest, stream agg.Aggregator_FetchNetworkLogsServer) error {
 	var count int64
 	var query string
 	var filterQuery []string
@@ -49,7 +48,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 			filterQuery = append(filterQuery, " l4_icmpv6_type != 0")
 		default:
 			log.Error().Msg("Invalid protocol filter Value : " + pbNetworkRequest.Protocol)
-			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Protocol Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in Protocol Filter")
 		}
 
 	}
@@ -65,7 +64,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 			filterQuery = append(filterQuery, " l7_http_url != \"\"")
 		default:
 			log.Error().Msg("Invalid L7 Protocol filter Value : " + pbNetworkRequest.L7)
-			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in L7 Protocol Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in L7 Protocol Filter")
 		}
 
 	}
@@ -106,7 +105,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 		givenTime, err := strconv.ParseInt(pbNetworkRequest.Since[:len(pbNetworkRequest.Since)-1], 10, 64)
 		if err != nil {
 			log.Error().Msg("invalid Since filter value : " + pbNetworkRequest.Since)
-			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in Since Filter")
 		}
 
 		switch pbNetworkRequest.Since[len(pbNetworkRequest.Since)-1:] {
@@ -120,7 +119,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)))
 		default:
 			log.Error().Msg("invalid Since filter value : " + pbNetworkRequest.Since[len(pbNetworkRequest.Since)-1:])
-			return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in Since Filter")
 		}
 	}
 
@@ -137,9 +136,12 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 		row := database.ConnectDB().QueryRow(query)
 		if err := row.Scan(&count); err != nil {
 			log.Error().Msg("Error in Connection in Network Logs :" + err.Error())
-			return agg.NetworkLogsResponse{}, errors.New("error in Connecting network logs table")
+			return errors.New("error in Connecting network logs table")
 		}
-		return agg.NetworkLogsResponse{Count: count}, nil
+		if err := stream.Send(&agg.NetworkLogsResponse{Count: count}); err != nil {
+			log.Error().Msg("Error in Streaming Network Count : " + err.Error())
+			return err
+		}
 	} else {
 		query = constants.SELECT_ALL_CILIUM + query + constants.ORDER_BY_UPDATED_TIME
 		//Check limit exist
@@ -150,8 +152,8 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 		//Fetch rows
 		rows, err := database.ConnectDB().Query(query)
 		if err != nil {
-			log.Error().Msg("Error in Connection in System Logs :" + err.Error())
-			return agg.NetworkLogsResponse{}, errors.New("error in Connecting system logs table")
+			log.Error().Msg("Error in Connection in System Logs : " + err.Error())
+			return errors.New("error in Connecting system logs table")
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -171,12 +173,14 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest) (agg.NetworkLogsRe
 				&netlog.IsReply,
 				&netlog.StartTime, &netlog.UpdatedTime, &netlog.Total); err != nil {
 				log.Error().Msg("Error in Scan network Logs : " + err.Error())
-				return agg.NetworkLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in scanning network logs table")
+				return status.Errorf(codes.InvalidArgument, "Error in scanning network logs table")
 			}
-			//append record
-			netlogs = append(netlogs, &netlog)
+			if err := stream.Send(&agg.NetworkLogsResponse{Logs: &netlog}); err != nil {
+				log.Error().Msg("Error in Streaming Network Logs : " + err.Error())
+				return err
+			}
 		}
 
 	}
-	return agg.NetworkLogsResponse{Logs: netlogs, Count: count}, nil
+	return nil
 }

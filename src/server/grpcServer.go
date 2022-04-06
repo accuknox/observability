@@ -52,25 +52,21 @@ type aggregatorServer struct {
 }
 
 //FetchNetworkLogs -  Service to fetch network logs or count
-func (a *aggregatorServer) FetchNetworkLogs(ctx context.Context, in *agg.NetworkLogsRequest) (*agg.NetworkLogsResponse, error) {
-	pbNetworkResponse := agg.NetworkLogsResponse{}
-	var err error
-	pbNetworkResponse, err = aggregator.GetNetworkLogs(in)
-	if err != nil {
-		return &pbNetworkResponse, err
+func (a *aggregatorServer) FetchNetworkLogs(in *agg.NetworkLogsRequest, stream agg.Aggregator_FetchNetworkLogsServer) error {
+
+	if err := aggregator.GetNetworkLogs(in, stream); err != nil {
+		return err
 	}
-	return &pbNetworkResponse, nil
+	return nil
 }
 
 //FetchSystemLogs -  Service to system network logs or count
-func (a *aggregatorServer) FetchSystemLogs(ctx context.Context, in *agg.SystemLogsRequest) (*agg.SystemLogsResponse, error) {
-	pbSystemResponse := agg.SystemLogsResponse{}
-	var err error
-	pbSystemResponse, err = aggregator.GetSystemLogs(in)
-	if err != nil {
-		return &pbSystemResponse, err
+func (a *aggregatorServer) FetchSystemLogs(in *agg.SystemLogsRequest, stream agg.Aggregator_FetchSystemLogsServer) error {
+
+	if err := aggregator.GetSystemLogs(in, stream); err != nil {
+		return err
 	}
-	return &pbSystemResponse, nil
+	return nil
 }
 
 // ================= //

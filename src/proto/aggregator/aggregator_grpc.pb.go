@@ -18,8 +18,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AggregatorClient interface {
-	FetchNetworkLogs(ctx context.Context, in *NetworkLogsRequest, opts ...grpc.CallOption) (*NetworkLogsResponse, error)
-	FetchSystemLogs(ctx context.Context, in *SystemLogsRequest, opts ...grpc.CallOption) (*SystemLogsResponse, error)
+	FetchNetworkLogs(ctx context.Context, in *NetworkLogsRequest, opts ...grpc.CallOption) (Aggregator_FetchNetworkLogsClient, error)
+	FetchSystemLogs(ctx context.Context, in *SystemLogsRequest, opts ...grpc.CallOption) (Aggregator_FetchSystemLogsClient, error)
 }
 
 type aggregatorClient struct {
@@ -30,30 +30,76 @@ func NewAggregatorClient(cc grpc.ClientConnInterface) AggregatorClient {
 	return &aggregatorClient{cc}
 }
 
-func (c *aggregatorClient) FetchNetworkLogs(ctx context.Context, in *NetworkLogsRequest, opts ...grpc.CallOption) (*NetworkLogsResponse, error) {
-	out := new(NetworkLogsResponse)
-	err := c.cc.Invoke(ctx, "/aggregator.Aggregator/FetchNetworkLogs", in, out, opts...)
+func (c *aggregatorClient) FetchNetworkLogs(ctx context.Context, in *NetworkLogsRequest, opts ...grpc.CallOption) (Aggregator_FetchNetworkLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Aggregator_ServiceDesc.Streams[0], "/aggregator.Aggregator/FetchNetworkLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &aggregatorFetchNetworkLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
 
-func (c *aggregatorClient) FetchSystemLogs(ctx context.Context, in *SystemLogsRequest, opts ...grpc.CallOption) (*SystemLogsResponse, error) {
-	out := new(SystemLogsResponse)
-	err := c.cc.Invoke(ctx, "/aggregator.Aggregator/FetchSystemLogs", in, out, opts...)
+type Aggregator_FetchNetworkLogsClient interface {
+	Recv() (*NetworkLogsResponse, error)
+	grpc.ClientStream
+}
+
+type aggregatorFetchNetworkLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *aggregatorFetchNetworkLogsClient) Recv() (*NetworkLogsResponse, error) {
+	m := new(NetworkLogsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *aggregatorClient) FetchSystemLogs(ctx context.Context, in *SystemLogsRequest, opts ...grpc.CallOption) (Aggregator_FetchSystemLogsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Aggregator_ServiceDesc.Streams[1], "/aggregator.Aggregator/FetchSystemLogs", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &aggregatorFetchSystemLogsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Aggregator_FetchSystemLogsClient interface {
+	Recv() (*SystemLogsResponse, error)
+	grpc.ClientStream
+}
+
+type aggregatorFetchSystemLogsClient struct {
+	grpc.ClientStream
+}
+
+func (x *aggregatorFetchSystemLogsClient) Recv() (*SystemLogsResponse, error) {
+	m := new(SystemLogsResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // AggregatorServer is the server API for Aggregator service.
 // All implementations must embed UnimplementedAggregatorServer
 // for forward compatibility
 type AggregatorServer interface {
-	FetchNetworkLogs(context.Context, *NetworkLogsRequest) (*NetworkLogsResponse, error)
-	FetchSystemLogs(context.Context, *SystemLogsRequest) (*SystemLogsResponse, error)
+	FetchNetworkLogs(*NetworkLogsRequest, Aggregator_FetchNetworkLogsServer) error
+	FetchSystemLogs(*SystemLogsRequest, Aggregator_FetchSystemLogsServer) error
 	mustEmbedUnimplementedAggregatorServer()
 }
 
@@ -61,11 +107,11 @@ type AggregatorServer interface {
 type UnimplementedAggregatorServer struct {
 }
 
-func (UnimplementedAggregatorServer) FetchNetworkLogs(context.Context, *NetworkLogsRequest) (*NetworkLogsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FetchNetworkLogs not implemented")
+func (UnimplementedAggregatorServer) FetchNetworkLogs(*NetworkLogsRequest, Aggregator_FetchNetworkLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method FetchNetworkLogs not implemented")
 }
-func (UnimplementedAggregatorServer) FetchSystemLogs(context.Context, *SystemLogsRequest) (*SystemLogsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FetchSystemLogs not implemented")
+func (UnimplementedAggregatorServer) FetchSystemLogs(*SystemLogsRequest, Aggregator_FetchSystemLogsServer) error {
+	return status.Errorf(codes.Unimplemented, "method FetchSystemLogs not implemented")
 }
 func (UnimplementedAggregatorServer) mustEmbedUnimplementedAggregatorServer() {}
 
@@ -80,40 +126,46 @@ func RegisterAggregatorServer(s grpc.ServiceRegistrar, srv AggregatorServer) {
 	s.RegisterService(&Aggregator_ServiceDesc, srv)
 }
 
-func _Aggregator_FetchNetworkLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(NetworkLogsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Aggregator_FetchNetworkLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(NetworkLogsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(AggregatorServer).FetchNetworkLogs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/aggregator.Aggregator/FetchNetworkLogs",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServer).FetchNetworkLogs(ctx, req.(*NetworkLogsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(AggregatorServer).FetchNetworkLogs(m, &aggregatorFetchNetworkLogsServer{stream})
 }
 
-func _Aggregator_FetchSystemLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SystemLogsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+type Aggregator_FetchNetworkLogsServer interface {
+	Send(*NetworkLogsResponse) error
+	grpc.ServerStream
+}
+
+type aggregatorFetchNetworkLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *aggregatorFetchNetworkLogsServer) Send(m *NetworkLogsResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Aggregator_FetchSystemLogs_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SystemLogsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(AggregatorServer).FetchSystemLogs(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/aggregator.Aggregator/FetchSystemLogs",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServer).FetchSystemLogs(ctx, req.(*SystemLogsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(AggregatorServer).FetchSystemLogs(m, &aggregatorFetchSystemLogsServer{stream})
+}
+
+type Aggregator_FetchSystemLogsServer interface {
+	Send(*SystemLogsResponse) error
+	grpc.ServerStream
+}
+
+type aggregatorFetchSystemLogsServer struct {
+	grpc.ServerStream
+}
+
+func (x *aggregatorFetchSystemLogsServer) Send(m *SystemLogsResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // Aggregator_ServiceDesc is the grpc.ServiceDesc for Aggregator service.
@@ -122,16 +174,18 @@ func _Aggregator_FetchSystemLogs_Handler(srv interface{}, ctx context.Context, d
 var Aggregator_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "aggregator.Aggregator",
 	HandlerType: (*AggregatorServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "FetchNetworkLogs",
-			Handler:    _Aggregator_FetchNetworkLogs_Handler,
+			StreamName:    "FetchNetworkLogs",
+			Handler:       _Aggregator_FetchNetworkLogs_Handler,
+			ServerStreams: true,
 		},
 		{
-			MethodName: "FetchSystemLogs",
-			Handler:    _Aggregator_FetchSystemLogs_Handler,
+			StreamName:    "FetchSystemLogs",
+			Handler:       _Aggregator_FetchSystemLogs_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "src/proto/aggregator/aggregator.proto",
 }

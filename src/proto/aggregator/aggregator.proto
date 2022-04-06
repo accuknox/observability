@@ -6,8 +6,8 @@ package aggregator;
 
 //Define Aggregator - To fetch Network and System Logs 
 service Aggregator {
-    rpc FetchNetworkLogs (NetworkLogsRequest) returns (NetworkLogsResponse);
-    rpc FetchSystemLogs (SystemLogsRequest) returns (SystemLogsResponse);
+    rpc FetchNetworkLogs (NetworkLogsRequest) returns (stream NetworkLogsResponse);
+    rpc FetchSystemLogs (SystemLogsRequest) returns (stream SystemLogsResponse);
 }
 
 //Filter Network Logs 
@@ -100,14 +100,14 @@ message SystemLogsRequest {
 
 //Response of Network Logs 
 message NetworkLogsResponse {
-   repeated NetworkLog logs = 1;
-   int64 count = 2;
+    NetworkLog logs = 1;
+    int64 count = 2;
 }
 
 //Response of System Logs 
 message SystemLogsResponse {
-   repeated SystemLog logs = 1;
-   int64 count = 2;
+    SystemLog logs = 1;
+    int64 count = 2;
 }
 
 message NetworkLog {
