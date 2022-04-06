@@ -19,8 +19,7 @@ import (
 
 var log *zerolog.Logger = logger.GetInstance()
 
-func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsResponse, error) {
-	var sysLogs []*agg.SystemLog
+func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest, stream agg.Aggregator_FetchSystemLogsServer) error {
 	var count int64
 	var query string
 	var filterQuery []string
@@ -65,7 +64,7 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 		givenTime, err := strconv.ParseInt(pbSystemRequest.Since[:len(pbSystemRequest.Since)-1], 10, 64)
 		if err != nil {
 			log.Error().Msg("invalid Since filter value : " + pbSystemRequest.Since)
-			return agg.SystemLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in Since Filter")
 		}
 
 		switch pbSystemRequest.Since[len(pbSystemRequest.Since)-1:] {
@@ -79,7 +78,7 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 			filterQuery = append(filterQuery, " updated_time > "+fmt.Sprint(currentTime-int64(givenTime)))
 		default:
 			log.Error().Msg("invalid Since filter value : " + pbSystemRequest.Since[len(pbSystemRequest.Since)-1:])
-			return agg.SystemLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in Since Filter")
+			return status.Errorf(codes.InvalidArgument, "Error in Since Filter")
 		}
 	}
 
@@ -94,9 +93,12 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 		row := database.ConnectDB().QueryRow(query)
 		if err := row.Scan(&count); err != nil {
 			log.Error().Msg("Error in Connection in System Logs :" + err.Error())
-			return agg.SystemLogsResponse{}, errors.New("error in Connecting system logs table")
+			return errors.New("error in Connecting system logs table")
 		}
-		return agg.SystemLogsResponse{Count: count}, nil
+		if err := stream.Send(&agg.SystemLogsResponse{Count: count}); err != nil {
+			log.Error().Msg("Error in Streaming System Count : " + err.Error())
+			return err
+		}
 	} else {
 		query = constants.SELECT_ALL_KUBEARMOR + query + constants.ORDER_BY_UPDATED_TIME
 		//Check limit exist
@@ -108,7 +110,7 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 		rows, err := database.ConnectDB().Query(query)
 		if err != nil {
 			log.Error().Msg("Error in Connection in System Logs :" + err.Error())
-			return agg.SystemLogsResponse{}, errors.New("error in Connecting system logs table")
+			return errors.New("error in Connecting system logs table")
 		}
 		defer rows.Close()
 		for rows.Next() {
@@ -119,11 +121,13 @@ func GetSystemLogs(pbSystemRequest *agg.SystemLogsRequest) (agg.SystemLogsRespon
 				&sysLog.Uid, &sysLog.Type, &sysLog.Source, &sysLog.Operation, &sysLog.Resource,
 				&sysLog.Data, &sysLog.StartTime, &sysLog.UpdateTime, &sysLog.Result, &sysLog.Total); err != nil {
 				log.Error().Msg("Error in Scan system Logs : " + err.Error())
-				return agg.SystemLogsResponse{}, status.Errorf(codes.InvalidArgument, "Error in scanning system logs table")
+				return status.Errorf(codes.InvalidArgument, "Error in scanning system logs table")
 			}
-			//append record
-			sysLogs = append(sysLogs, &sysLog)
+			if err := stream.Send(&agg.SystemLogsResponse{Logs: &sysLog}); err != nil {
+				log.Error().Msg("Error in Streaming System Logs : " + err.Error())
+				return err
+			}
 		}
 	}
-	return agg.SystemLogsResponse{Logs: sysLogs, Count: count}, nil
+	return nil
 }
