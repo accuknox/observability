@@ -2,6 +2,7 @@ package kubearmor
 
 import (
 	"context"
+	"sync"
 
 	logger "github.com/accuknox/observability/src/logger"
 	"github.com/accuknox/observability/utils/constants"
@@ -75,7 +76,8 @@ func HealthCheck(client kubearmor.LogServiceClient) bool {
 	return false
 }
 
-func FetchLogs(stream kubearmor.LogService_WatchLogsClient) {
+func FetchLogs(stream kubearmor.LogService_WatchLogsClient, wg *sync.WaitGroup) {
+	defer wg.Done()
 	//Fetch the kubearmor Logs
 	kubearmorLog, err := stream.Recv()
 	if err != nil {

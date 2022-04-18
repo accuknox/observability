@@ -2,6 +2,8 @@ package hubble
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
 
 	logger "github.com/accuknox/observability/src/logger"
@@ -89,14 +91,15 @@ func HealthCheck(client observer.ObserverClient) (uint64, error) {
 }
 
 //FetchLogs - Fetch Logs from Hubble Relay
-func FetchLogs(stream observer.Observer_GetFlowsClient) {
-	//Receiving logs from stream
+func FetchLogs(stream observer.Observer_GetFlowsClient, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// Receiving logs from stream
 	hubbleLog, err := stream.Recv()
 	if err != nil {
 		log.Error().Msg("Error in receiving hubble log " + err.Error())
 		return
 	}
-	// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
+	fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 	var getFlow *flow.Flow = hubbleLog.GetFlow()
 	if getFlow != nil {
 		// l3
@@ -229,8 +232,8 @@ func FetchLogs(stream observer.Observer_GetFlowsClient) {
 			getFlow.GetTraceObservationPoint().Enum().String(),
 			dropReason,
 			isReply.Value)
-		if err != nil {
-			log.Error().Msg("Error in Select Query from Cilium Log Table : " + err.Error())
+		if row.Err() != nil {
+			log.Error().Msg("Error in Select Query from Cilium Log Table : " + row.Err().Error())
 		}
 		//Store the ID
 		var id int
