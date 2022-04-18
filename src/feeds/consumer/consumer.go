@@ -6,6 +6,7 @@ import (
 	"github.com/accuknox/observability/src/feeds/hubble"
 	"github.com/accuknox/observability/src/feeds/kubearmor"
 	logger "github.com/accuknox/observability/src/logger"
+	"github.com/cilium/cilium/api/v1/observer"
 	"github.com/rs/zerolog"
 )
 
@@ -42,26 +43,29 @@ func startConsumer() {
 			log.Info().Msgf("Got a signal to terminate the consumer")
 			run = false
 		default:
-			childwg := &sync.WaitGroup{}
-			childwg.Add(2)
-			// hubbleLog, err := hubbleClient.Recv()
-			// if err != nil {
-			// 	log.Error().Msg("Error in receiving hubble log " + err.Error())
-			// 	return
-			// }
-			// // fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
-			// hubbleChan := make(chan *observer.GetFlowsResponse)
+			// childwg := &sync.WaitGroup{}
+			// childwg.Add(2)
+			hubbleLog, err := hubbleClient.Recv()
+			if err != nil {
+				log.Error().Msg("Error in receiving hubble log " + err.Error())
+				return
+			}
+			// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
+			hubbleChan := make(chan *observer.GetFlowsResponse)
 
-			// go hubble.FetchLogs(hubbleChan)
+			//Aggregate Network Logs
+			go hubble.FetchLogs(hubbleChan)
 
-			// hubbleChan <- hubbleLog
+			hubbleChan <- hubbleLog
 
-			go hubble.FetchLogs(hubbleClient, childwg)
+			//Aggregate System Logs
+			kubearmor.FetchLogs(kubearmorClient)
+			// go hubble.FetchLogs(hubbleClient, childwg)
 
-			go kubearmor.FetchLogs(kubearmorClient, childwg)
+			// go kubearmor.FetchLogs(kubearmorClient, childwg)
 			// time.Sleep(time.Second * 1)
 
-			childwg.Wait()
+			// childwg.Wait()
 
 		}
 

@@ -3,7 +3,6 @@ package hubble
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	logger "github.com/accuknox/observability/src/logger"
@@ -91,14 +90,16 @@ func HealthCheck(client observer.ObserverClient) (uint64, error) {
 }
 
 //FetchLogs - Fetch Logs from Hubble Relay
-func FetchLogs(stream observer.Observer_GetFlowsClient, wg *sync.WaitGroup) {
-	defer wg.Done()
+// func FetchLogs(stream observer.Observer_GetFlowsClient, wg *sync.WaitGroup) {
+func FetchLogs(stream chan *observer.GetFlowsResponse) {
+	// defer wg.Done()
 	// Receiving logs from stream
-	hubbleLog, err := stream.Recv()
-	if err != nil {
-		log.Error().Msg("Error in receiving hubble log " + err.Error())
-		return
-	}
+	// hubbleLog, err := stream.Recv()
+	// if err != nil {
+	// 	log.Error().Msg("Error in receiving hubble log " + err.Error())
+	// 	return
+	// }
+	hubbleLog := <-stream
 	fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 	var getFlow *flow.Flow = hubbleLog.GetFlow()
 	if getFlow != nil {
