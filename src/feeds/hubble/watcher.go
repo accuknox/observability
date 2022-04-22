@@ -2,7 +2,6 @@ package hubble
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	logger "github.com/accuknox/observability/src/logger"
@@ -100,7 +99,7 @@ func FetchLogs(stream chan *observer.GetFlowsResponse) {
 	// 	return
 	// }
 	hubbleLog := <-stream
-	fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
+	// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
 	var getFlow *flow.Flow = hubbleLog.GetFlow()
 	if getFlow != nil {
 		// l3

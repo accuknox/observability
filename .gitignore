@@ -20,3 +20,5 @@ log/
 bin/
 
 *.db
+
+observability

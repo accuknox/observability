@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-const PortNumber = "9089"
+const PortNumber = "8089"
 
 var log *zerolog.Logger = logger.GetInstance()
 var wg sync.WaitGroup
