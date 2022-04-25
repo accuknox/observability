@@ -101,8 +101,8 @@ sonar_properties:
 #for sonar credentials use username/API Token combo which was created in jenkins manage credentials.
 #**********************************************************************************************************************************#
   sonar_conf:
-  -   sonar.projectKey: feeder-service
-      sonar.projectName: feeder-service
+  -   sonar.projectKey: observability
+      sonar.projectName: observability
       sonar.projectVersion: 2.7
       sonar.language: java
       sonar.java.binaries: ./
