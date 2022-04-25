@@ -124,7 +124,7 @@ helm_build:
     image:
       name: "artifactory.accuknox.com/accuknox/custom-helm-image:latest"
       docker_run_params: ""
-    helm_dir: charts
+    helm_dir: observability-chart
     tag: 1.0.1
     commands:
       - helm lint
