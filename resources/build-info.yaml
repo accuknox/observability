@@ -140,7 +140,7 @@ publish_config:
     publish_nexus_credentials: "agentswithnexus"
     accuknoxDockerHub: 
       cred: accuknox-dockerhub 
-      repo: accuknox/observability
+      repo: accuknox
     # docker:
     #   snapshot: agents.accuknox.com/repository/docker-snapshot
     #   dev:  agents.accuknox.com/repository/docker-dev
