@@ -1,0 +1,10 @@
+{{- if .Values.configmapObservability.enabled -}}
+apiVersion: v1 
+kind: ConfigMap 
+metadata: 
+  name: {{ .Values.configmapObservability.name}} 
+  labels:
+{{ toYaml .Values.labels | indent 4 }}
+data: 
+    app.yaml: {{ tpl (.Files.Get  .Values.configmapObservability.app) . | quote }}
+{{- end }}

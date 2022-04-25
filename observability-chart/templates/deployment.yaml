@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.labels.app }}
+  labels:
+{{ toYaml .Values.labels | indent 4 }}    
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+{{ toYaml .Values.labels | indent 8 }}
+  strategy: 
+    type: {{ .Values.type }}
+    rollingUpdate:
+      maxSurge: {{ .Values.maxSurge }}
+      maxUnavailable: {{ .Values.maxUnavailable }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  template:
+    metadata:
+      labels:
+{{ toYaml .Values.labels | indent 8 }}        
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+        {{ toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        {{ toYaml .Values.volumesObservability | nindent 8 }}
+      containers:
+      - name: {{ .Values.labels.app }}
+        image: '{{ .Values.observabilityImage.repository }}:{{ .Values.observabilityImage.tag | default .Chart.AppVersion }}'
+        imagePullPolicy: {{ .Values.observabilityImage.pullPolicy }}
+        volumeMounts:
+          {{ toYaml .Values.volumeMountsobservability | nindent 12 }}
+        resources:
+          {{ toYaml .Values.observabilityResources | nindent 12 }}
+        ports:
+          {{ toYaml .Values.containerPortObservability | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }} 

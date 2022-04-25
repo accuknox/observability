@@ -1,0 +1,113 @@
+# Default values for cluster-management-service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+observabilityImage:
+  repository: gcr.io/mimetic-kit-294408/development/observability
+  tag: ""
+  pullPolicy: Always
+
+#labels
+labels:
+  environment: dev
+  app: observability
+
+#deployment name
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+#rolling update
+type: RollingUpdate
+maxSurge: 0
+maxUnavailable: 1
+minReadySeconds: 5
+revisionHistoryLimit: 10 
+
+#serviceAccount
+serviceAccount: {} 
+
+podSecurityContext:
+  fsGroup: 1337
+
+#SecurityContext
+securityContextPolicyManagement: {}
+
+#service
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: 8089
+  protocol: TCP
+  name: http
+
+serviceExternal:
+  enabled: false
+
+#Container Port Open 
+containerPortObservability:
+  - containerPort: 8089
+
+#ingress Layer 7 certificate Loadbalancer
+ingress:
+  enabled: false
+
+#Configmap clusterManagementService
+configmapObservability:
+  name: observability-dev-config
+  enabled: true
+  app: "configmapfiles/dev/observability/app.yaml"
+
+#Volumes
+volumesclusterManagementService:
+- name: observability-config-volume
+  configMap:
+   name: observability-config
+   defaultMode: 0744 
+- name: observability-logs-volume
+  emptyDir: {}
+
+#clusterManagementService Volume-Mounts 
+volumeMountsObservability:
+- name: observability-config-volume
+  mountPath: /home/observability/conf/app.yaml
+  subPath: app.yaml
+- name: observability-logs-volume
+  mountPath: /home/observability/log/service.log
+  subPath: service.log
+
+#Resources
+observabilityResources:
+  requests:
+    cpu: 0.4
+    memory: 800M
+  limits:
+    cpu: 0.6
+    memory: 900M
+
+#persistentVolumeClaim 
+persistentVolumeClaim:
+  enabled: false
+  name: observability-pvc
+  accessModes: ReadWriteOnce
+  storageClassName: standard
+  resources: 
+    requests:
+      storage: 50Gi
+
+#HPA
+autoscaling:
+  enabled: true
+  targetCPUUtilizationPercentage: 85
+  targetMemoryUtilizationPercentage: 85
+  minReplicas: 2
+  maxReplicas: 4
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
