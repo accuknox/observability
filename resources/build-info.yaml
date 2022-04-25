@@ -26,7 +26,7 @@
 #***********************************************************************************************************************************#
 
 docker_build:
-  - name: observability
+  - name: observability-dev
     Dockerfile_dir: .
     Dockerfile_name: Dockerfile
     pre_steps:
@@ -138,11 +138,14 @@ helm_build:
 #***********************************************************************************************************************************#
 publish_config:
     publish_nexus_credentials: "agentswithnexus"
-    docker:
-      snapshot: agents.accuknox.com/repository/docker-snapshot
-      dev:  agents.accuknox.com/repository/docker-dev
-      verify:  agents.accuknox.com/repository/docker-verify
-      prod:  agents.accuknox.com/repository
+    accuknoxDockerHub: 
+      cred: accuknox-dockerhub 
+      repo: accuknox/observability
+    # docker:
+    #   snapshot: agents.accuknox.com/repository/docker-snapshot
+    #   dev:  agents.accuknox.com/repository/docker-dev
+    #   verify:  agents.accuknox.com/repository/docker-verify
+    #   prod:  agents.accuknox.com/repository
     helm:
       snapshot: https://agents.accuknox.com/repository/helm-snapshot/
       dev: https://agents.accuknox.com/repository/helm-dev/
