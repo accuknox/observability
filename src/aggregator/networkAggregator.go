@@ -56,10 +56,8 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest, stream agg.Aggrega
 	if len(pbNetworkRequest.L7) != 0 {
 
 		switch pbNetworkRequest.L7 {
-		case "Kafka":
-			filterQuery = append(filterQuery, " l7_kafka_topic != \"\"")
 		case "DNS":
-			filterQuery = append(filterQuery, " l7_dns_query != \"\"")
+			filterQuery = append(filterQuery, " l7_dns_cnames != \"\"")
 		case "HTTP":
 			filterQuery = append(filterQuery, " l7_http_url != \"\"")
 		default:
@@ -175,6 +173,7 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest, stream agg.Aggrega
 				log.Error().Msg("Error in Scan network Logs : " + err.Error())
 				return status.Errorf(codes.InvalidArgument, "Error in scanning network logs table")
 			}
+			fmt.Println("Logs : ", netlog)
 			if err := stream.Send(&agg.NetworkLogsResponse{Logs: &netlog}); err != nil {
 				log.Error().Msg("Error in Streaming Network Logs : " + err.Error())
 				return err
