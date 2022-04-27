@@ -173,7 +173,6 @@ func GetNetworkLogs(pbNetworkRequest *agg.NetworkLogsRequest, stream agg.Aggrega
 				log.Error().Msg("Error in Scan network Logs : " + err.Error())
 				return status.Errorf(codes.InvalidArgument, "Error in scanning network logs table")
 			}
-			fmt.Println("Logs : ", netlog)
 			if err := stream.Send(&agg.NetworkLogsResponse{Logs: &netlog}); err != nil {
 				log.Error().Msg("Error in Streaming Network Logs : " + err.Error())
 				return err
