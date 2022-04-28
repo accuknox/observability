@@ -1,7 +1,7 @@
 #KubeArmor Config
 kubeArmor:
   url: 127.0.0.1
-  port: 32766
+  port: 32767
 
 #Cilium Config
 cilium:
