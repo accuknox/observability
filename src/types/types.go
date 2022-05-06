@@ -101,3 +101,14 @@ type CiliumFilter struct {
 	Verdict   string `json:"verdict"`
 	Direction string `json:"direction"`
 }
+
+type NetworkSummary struct {
+	DestinationLabels string `json:"destination_labels"`
+	TrafficDirection  string `json:"traffic_direction"`
+}
+
+type SystemSummery struct {
+	Operation string `json:"operation"`
+	Source    string `json:"source"`
+	Resource  string `json:"resource"`
+}

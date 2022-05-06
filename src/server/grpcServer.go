@@ -9,6 +9,8 @@ import (
 	logger "github.com/accuknox/observability/src/logger"
 	agg "github.com/accuknox/observability/src/proto/aggregator"
 	cpb "github.com/accuknox/observability/src/proto/consumer"
+	sum "github.com/accuknox/observability/src/proto/summary"
+	"github.com/accuknox/observability/src/summary"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -69,6 +71,23 @@ func (a *aggregatorServer) FetchSystemLogs(in *agg.SystemLogsRequest, stream agg
 	return nil
 }
 
+// ======================== //
+// === Summary Service === //
+// ====================== //
+
+type summaryServer struct {
+	sum.SummaryServer
+}
+
+//FetchLogs -  Service to fetch summary logs based on Pod level
+func (s *summaryServer) FetchLogs(in *sum.LogsRequest, stream sum.Summary_FetchLogsServer) error {
+
+	if err := summary.GetSummaryLogs(in, stream); err != nil {
+		return err
+	}
+	return nil
+}
+
 // ================= //
 // == gRPC Server == //
 // ================= //
@@ -84,10 +103,12 @@ func GetNewServer() *grpc.Server {
 	//Create Server Instance
 	consumerServer := &consumerServer{}
 	aggregatorServer := &aggregatorServer{}
+	summaryServer := &summaryServer{}
 
 	//Register gRPC Server
 	cpb.RegisterConsumerServer(s, consumerServer)
 	agg.RegisterAggregatorServer(s, aggregatorServer)
+	sum.RegisterSummaryServer(s, summaryServer)
 
 	//Start Consumer automatically
 	consumer.StartConsumer()
