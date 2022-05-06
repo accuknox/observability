@@ -85,7 +85,7 @@ func FetchLogs(stream kubearmor.LogService_WatchLogsClient) {
 	// fmt.Println("\n\nKubeArmor Logs ===>>> ", kubearmorLog)
 	//Select Query to fetch ID
 	row := database.ConnectDB().QueryRow(constants.SELECT_KUBEARMOR, kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
-		kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource,
+		kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
 		kubearmorLog.Data, kubearmorLog.Result)
 	if err != nil {
 		log.Error().Msg("Error in Select Query from KubeArmor Log Table : " + err.Error())
@@ -116,7 +116,7 @@ func FetchLogs(stream kubearmor.LogService_WatchLogsClient) {
 		}
 		//Execute the insert query statement
 		statement.Exec(kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
-			kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource,
+			kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
 			kubearmorLog.Data, kubearmorLog.Timestamp, kubearmorLog.Timestamp, kubearmorLog.Result)
 
 		defer statement.Close()

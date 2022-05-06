@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+option go_package = "github.com/accuknox/observability/proto/summary";
+
+package summary;
+
+service Summary {
+    rpc FetchLogs (LogsRequest) returns (stream LogsResponse);
+}
+
+message LogsRequest {
+
+    string label = 1;
+    string namespace = 2;
+}
+
+message LogsResponse {
+    string podDetail = 1;
+    string namespace = 2;
+    repeated ListOfSource listOfProcess = 3;
+    repeated ListOfSource listOfFile = 4; 
+    repeated ListOfSource listOfNetwork = 5;
+    ListOfConnection ingress = 6;
+    ListOfConnection egress = 7; 
+}
+
+message ListOfSource {
+    string source = 1;
+    repeated string resource = 2;
+}
+
+message ListOfConnection {
+    int32 in = 1;
+    int32 out = 2;
+}
