@@ -61,7 +61,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 		networkSource := make(map[string][]*sum.ListOfDestination)
 		// source := make(map[string]int32)
 		for _, sysLog := range sysLogs {
-			source := aggregateFolder(sysLog.Source)
+			source := strings.Split(sysLog.Source, " ")[0]
 			resource := aggregateFolder(sysLog.Resource)
 			switch sysLog.Operation {
 			case "File":
