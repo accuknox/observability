@@ -26,10 +26,16 @@ message LogsResponse {
 
 message ListOfSource {
     string source = 1;
-    repeated string resource = 2;
+    repeated ListOfDestination listOfDestination = 2;
 }
 
 message ListOfConnection {
     int32 in = 1;
     int32 out = 2;
+}
+
+message ListOfDestination {
+    string destination = 1;
+    int32 count = 2;
+    string status = 3;
 }
