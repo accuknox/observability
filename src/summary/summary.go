@@ -16,7 +16,6 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 
 	systemPods := make(map[string][]types.SystemSummery)
 	networkPods := make(map[string][]types.NetworkSummary)
-
 	//Fetch network Logs
 	rows, err := database.ConnectDB().Query("select source_pod_name, destination_labels, traffic_direction from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
 	if err != nil {
@@ -32,10 +31,11 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 			return err
 		}
 		networkPods[podName] = append(networkPods[podName], netLog)
+
 	}
 
 	//Fetch System Logs
-	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
+	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource,total from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in System Logs :" + err.Error())
 		return errors.New("error in Connecting system logs table")
@@ -44,7 +44,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for rows.Next() {
 		var podName string
 		var syslog types.SystemSummery
-		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource); err != nil {
+		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource, &syslog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return errors.New("error in scanning system logs table")
 		}
@@ -56,48 +56,42 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 		var listOfFile, listOfProcess, listOfNetwork []*sum.ListOfSource
 		var ingressIn, ingressOut, egressIn, egressOut int32
 		//System Block
-		fileSource := make(map[string][]string)
-		processSource := make(map[string][]string)
-		networkSource := make(map[string][]string)
-
+		fileSource := make(map[string][]*sum.ListOfDestination)
+		processSource := make(map[string][]*sum.ListOfDestination)
+		networkSource := make(map[string][]*sum.ListOfDestination)
+		// source := make(map[string]int32)
 		for _, sysLog := range sysLogs {
-			source := strings.Split(sysLog.Source, " ")[0]
-			resource := strings.Split(sysLog.Resource, " ")[0]
+			source := aggregateFolder(sysLog.Source)
+			resource := aggregateFolder(sysLog.Resource)
 			switch sysLog.Operation {
 			case "File":
-				if !isExist(fileSource[source], resource) {
-					fileSource[source] = append(fileSource[source], resource)
-				}
+				fileSource[source] = convertListofDestination(fileSource[source], resource, sysLog.Count)
 			case "Process":
-				if !isExist(processSource[source], resource) {
-					processSource[source] = append(processSource[source], resource)
-				}
+				processSource[source] = convertListofDestination(processSource[source], resource, sysLog.Count)
 			case "Network":
 				protocol, _ := networkRegex(sysLog.Resource)
 				if protocol != "" {
-					if !isExist(networkSource[source], protocol) {
-						networkSource[source] = append(networkSource[source], protocol)
-					}
+					networkSource[source] = convertListofDestination(networkSource[source], protocol, sysLog.Count)
 				}
 			}
 		}
 		for source, resources := range fileSource {
 			listOfFile = append(listOfFile, &sum.ListOfSource{
-				Source:   source,
-				Resource: resources,
+				Source:            source,
+				ListOfDestination: resources,
 			})
 		}
 		for source, resources := range processSource {
 			listOfProcess = append(listOfProcess, &sum.ListOfSource{
-				Source:   source,
-				Resource: resources,
+				Source:            source,
+				ListOfDestination: resources,
 			})
 		}
 
 		for source, protocols := range networkSource {
 			listOfNetwork = append(listOfNetwork, &sum.ListOfSource{
-				Source:   source,
-				Resource: protocols,
+				Source:            source,
+				ListOfDestination: protocols,
 			})
 		}
 
@@ -151,7 +145,7 @@ func networkRegex(str string) (string, error) {
 		return "", err
 	}
 	if retcp.MatchString(str) {
-		return "tcp", nil
+		return "TCP", nil
 	}
 	reudp, err = regexp.Compile("domain=.*type=SOCK_DGRAM")
 	if err != nil {
@@ -159,7 +153,7 @@ func networkRegex(str string) (string, error) {
 		return "", err
 	}
 	if reudp.MatchString(str) {
-		return "udp", nil
+		return "UDP", nil
 	}
 	reicmp, err = regexp.Compile(`domain=.*protocol=(\b58\b|\b1\b)`) //1=icmp, 58=icmp6
 	if err != nil {
@@ -167,7 +161,7 @@ func networkRegex(str string) (string, error) {
 		return "", err
 	}
 	if reicmp.MatchString(str) {
-		return "icmp", nil
+		return "ICMP", nil
 	}
 	reraw, err = regexp.Compile("domain=.*type=SOCK_RAW")
 	if err != nil {
@@ -175,17 +169,46 @@ func networkRegex(str string) (string, error) {
 		return "", err
 	}
 	if reraw.MatchString(str) {
-		return "raw", nil
+		return "RAW", nil
 	}
 	return "", nil
 }
 
-//isExist - To find string is exist in the array or not
-func isExist(arr []string, str string) bool {
+//convertListofDestination - Create the mapping between Source and Destination/Resource/Protocol
+func convertListofDestination(arr []*sum.ListOfDestination, destination string, count int32) []*sum.ListOfDestination {
 	for _, value := range arr {
-		if value == str {
-			return true
+		if value.Destination == destination {
+			value.Count += count
+			return arr
 		}
 	}
-	return false
+	arr = append(arr, &sum.ListOfDestination{
+		Destination: destination,
+		Count:       count,
+		Status:      "ALLOW",
+	})
+	return arr
+}
+
+/* aggregateFolder - Aggreagte the Folder or File path with Parent name
+For Example - Folder Name is /abc/bin/1234 or /abc/xyz.txt --> convert this into /abc/*
+*/
+func aggregateFolder(str string) string {
+
+	switch str {
+	case "":
+		return str
+	case "/":
+		return str
+	default:
+		if strings.HasPrefix(str, "/") {
+			s := strings.SplitAfterN(str, "/", -1)[1]
+			if strings.HasSuffix(s, "/") {
+				return "/" + s + "*"
+			}
+
+			return "/" + s
+		}
+		return str
+	}
 }

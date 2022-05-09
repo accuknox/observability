@@ -111,4 +111,5 @@ type SystemSummery struct {
 	Operation string `json:"operation"`
 	Source    string `json:"source"`
 	Resource  string `json:"resource"`
+	Count     int32  `json:"count"`
 }
