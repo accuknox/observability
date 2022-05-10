@@ -105,6 +105,7 @@ type CiliumFilter struct {
 type NetworkSummary struct {
 	DestinationLabels string `json:"destination_labels"`
 	TrafficDirection  string `json:"traffic_direction"`
+	Count             int32  `json:"count"`
 }
 
 type SystemSummery struct {

@@ -17,7 +17,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	systemPods := make(map[string][]types.SystemSummery)
 	networkPods := make(map[string][]types.NetworkSummary)
 	//Fetch network Logs
-	rows, err := database.ConnectDB().Query("select source_pod_name, destination_labels, traffic_direction from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
+	rows, err := database.ConnectDB().Query("select source_pod_name, destination_labels, traffic_direction,total from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in Network Logs :" + err.Error())
 		return err
@@ -26,7 +26,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for rows.Next() {
 		var netLog types.NetworkSummary
 		var podName string
-		if err := rows.Scan(&podName, &netLog.DestinationLabels, &netLog.TrafficDirection); err != nil {
+		if err := rows.Scan(&podName, &netLog.DestinationLabels, &netLog.TrafficDirection, &netLog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return err
 		}
@@ -100,15 +100,15 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 			switch netLog.TrafficDirection {
 			case "INGRESS":
 				if netLog.DestinationLabels == "reserved:world" {
-					ingressOut++
+					ingressOut += netLog.Count
 				} else {
-					ingressIn++
+					ingressIn += netLog.Count
 				}
 			case "EGRESS":
 				if netLog.DestinationLabels == "reserved:world" {
-					egressOut++
+					egressOut += netLog.Count
 				} else {
-					egressIn++
+					egressIn += netLog.Count
 				}
 			}
 		}
