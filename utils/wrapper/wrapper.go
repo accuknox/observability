@@ -9,7 +9,19 @@ import (
 
 //ConvertArrayToString - Convert Array of string to String
 func ConvertArrayToString(arr []string) string {
-	return strings.Join(arr, ", ")
+	var str string
+	for _, label := range arr {
+		if !strings.HasPrefix(label, "k8s:io.cilium.") {
+			if !strings.HasPrefix(label, "k8s:io.kubernetes.") {
+				tstr := strings.TrimPrefix(label, "k8s:")
+				if str != "" {
+					str += constants.COMMA
+				}
+				str += tstr
+			}
+		}
+	}
+	return str
 
 }
 
