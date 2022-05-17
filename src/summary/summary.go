@@ -4,6 +4,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"sync"
 
 	sum "github.com/accuknox/observability/src/proto/summary"
 	"github.com/accuknox/observability/src/types"
@@ -17,16 +18,17 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	systemPods := make(map[string][]types.SystemSummery)
 	networkPods := make(map[string][]types.NetworkSummary)
 	//Fetch network Logs
-	rows, err := database.ConnectDB().Query("select source_pod_name, destination_labels, traffic_direction,total from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
+	rows, err := database.ConnectDB().Query("select source_pod_name, verdict, destination_labels, destination_namespace, type, l4_tcp_destination_port, l4_udp_destination_port, l4_icmpv4_code, l4_icmpv6_code,l7_dns_cnames,l7_http_method, traffic_direction, updated_time, total from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in Network Logs :" + err.Error())
 		return err
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var netLog types.NetworkSummary
 		var podName string
-		if err := rows.Scan(&podName, &netLog.DestinationLabels, &netLog.TrafficDirection, &netLog.Count); err != nil {
+		if err := rows.Scan(&podName, &netLog.Verdict, &netLog.DestinationLabels, &netLog.DestinationNamespace, &netLog.Type, &netLog.L4TCPDestinationPort, &netLog.L4UDPDestinationPort, &netLog.L4ICMPv4Code, &netLog.L4ICMPv6Code, &netLog.L7DnsCnames, &netLog.L7HttpMethod, &netLog.TrafficDirection, &netLog.UpdatedTime, &netLog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return err
 		}
@@ -35,7 +37,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	}
 
 	//Fetch System Logs
-	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource,total from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
+	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource,updated_time,total from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in System Logs :" + err.Error())
 		return errors.New("error in Connecting system logs table")
@@ -44,7 +46,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for rows.Next() {
 		var podName string
 		var syslog types.SystemSummery
-		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource, &syslog.Count); err != nil {
+		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource, &syslog.UpdatedTime, &syslog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return errors.New("error in scanning system logs table")
 		}
@@ -54,7 +56,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for podName, sysLogs := range systemPods {
 
 		var listOfFile, listOfProcess, listOfNetwork []*sum.ListOfSource
-		var ingressIn, ingressOut, egressIn, egressOut int32
+		// var ingressIn, ingressOut, egressIn, egressOut int32
 		//System Block
 		fileSource := make(map[string][]*sum.ListOfDestination)
 		processSource := make(map[string][]*sum.ListOfDestination)
@@ -62,16 +64,16 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 		// source := make(map[string]int32)
 		for _, sysLog := range sysLogs {
 			source := strings.Split(sysLog.Source, " ")[0]
-			resource := aggregateFolder(sysLog.Resource)
+
 			switch sysLog.Operation {
 			case "File":
-				fileSource[source] = convertListofDestination(fileSource[source], resource, sysLog.Count)
+				fileSource[source] = convertListofDestination(fileSource[source], sysLog)
 			case "Process":
-				processSource[source] = convertListofDestination(processSource[source], resource, sysLog.Count)
+				processSource[source] = convertListofDestination(processSource[source], sysLog)
 			case "Network":
 				protocol, _ := networkRegex(sysLog.Resource)
 				if protocol != "" {
-					networkSource[source] = convertListofDestination(networkSource[source], protocol, sysLog.Count)
+					networkSource[source] = convertListofDestination(networkSource[source], sysLog)
 				}
 			}
 		}
@@ -94,24 +96,33 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 				ListOfDestination: protocols,
 			})
 		}
-
+		var networkIngress, networkEgress []*sum.ListOfConnection
 		//Network Block
+		var wg sync.WaitGroup
 		for _, netLog := range networkPods[podName] {
-			switch netLog.TrafficDirection {
-			case "INGRESS":
-				if netLog.DestinationLabels == "reserved:world" {
-					ingressOut += netLog.Count
-				} else {
-					ingressIn += netLog.Count
+			wg.Add(1)
+			go func(netLog types.NetworkSummary) {
+				defer wg.Done()
+				switch netLog.TrafficDirection {
+				case "INGRESS":
+					// if netLog.DestinationLabels == "reserved:world" {
+					// 	ingressOut += netLog.Count
+					// } else {
+					// 	ingressIn += netLog.Count
+					// }
+					networkIngress = convertNetworkConnection(netLog, networkIngress)
+
+				case "EGRESS":
+					// if netLog.DestinationLabels == "reserved:world" {
+					// 	egressOut += netLog.Count
+					// } else {
+					// 	egressIn += netLog.Count
+					// }
+					networkEgress = convertNetworkConnection(netLog, networkEgress)
 				}
-			case "EGRESS":
-				if netLog.DestinationLabels == "reserved:world" {
-					egressOut += netLog.Count
-				} else {
-					egressIn += netLog.Count
-				}
-			}
+			}(netLog)
 		}
+		wg.Wait()
 		//Stream Block
 		if err := stream.Send(&sum.LogsResponse{
 			PodDetail:     podName,
@@ -119,14 +130,8 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 			ListOfFile:    listOfFile,
 			ListOfProcess: listOfProcess,
 			ListOfNetwork: listOfNetwork,
-			Ingress: &sum.ListOfConnection{
-				In:  ingressIn,
-				Out: ingressOut,
-			},
-			Egress: &sum.ListOfConnection{
-				In:  egressIn,
-				Out: egressOut,
-			},
+			Ingress:       networkIngress,
+			Egress:        networkEgress,
 		}); err != nil {
 			log.Error().Msg("Error in Streaming Summary Logs : " + err.Error())
 		}
@@ -175,17 +180,20 @@ func networkRegex(str string) (string, error) {
 }
 
 //convertListofDestination - Create the mapping between Source and Destination/Resource/Protocol
-func convertListofDestination(arr []*sum.ListOfDestination, destination string, count int32) []*sum.ListOfDestination {
+func convertListofDestination(arr []*sum.ListOfDestination, sysLog types.SystemSummery) []*sum.ListOfDestination {
+	destination := aggregateFolder(sysLog.Resource)
 	for _, value := range arr {
 		if value.Destination == destination {
-			value.Count += count
+			value.Count += sysLog.Count
+			value.LastUpdatedTime = sysLog.UpdatedTime
 			return arr
 		}
 	}
 	arr = append(arr, &sum.ListOfDestination{
-		Destination: destination,
-		Count:       count,
-		Status:      "ALLOW",
+		Destination:     destination,
+		Count:           sysLog.Count,
+		Status:          "ALLOW",
+		LastUpdatedTime: sysLog.UpdatedTime,
 	})
 	return arr
 }
@@ -211,4 +219,56 @@ func aggregateFolder(str string) string {
 		}
 		return str
 	}
+}
+
+func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfConnection) []*sum.ListOfConnection {
+
+	var listOfConn sum.ListOfConnection
+
+	listOfConn.DestinationLabels = netLog.DestinationLabels
+	listOfConn.DestinationNamespace = netLog.DestinationNamespace
+
+	if netLog.L4TCPDestinationPort != 0 {
+		listOfConn.Port = netLog.L4TCPDestinationPort
+		if netLog.L7HttpMethod != "" {
+			listOfConn.Protocol = "HTTP"
+		} else {
+			listOfConn.Protocol = "TCP"
+		}
+	} else if netLog.L4UDPDestinationPort != 0 {
+		listOfConn.Port = netLog.L4UDPDestinationPort
+		if netLog.L7DnsCnames != "" {
+			listOfConn.Protocol = "DNS"
+		} else {
+			listOfConn.Protocol = "TCP"
+		}
+	} else if netLog.L4ICMPv4Code != 0 {
+		listOfConn.Protocol = "ICMPv4"
+	} else {
+		listOfConn.Protocol = "ICMPv6"
+	}
+
+	//Find Status
+	switch netLog.Verdict {
+	case "FORWARDED":
+		listOfConn.Status = "ALLOW"
+	case "DROPPED", "ERROR", "REDIRECTED":
+		listOfConn.Status = "DENY"
+	case "AUDIT":
+		listOfConn.Status = "AUDIT"
+	}
+
+	for _, value := range list {
+
+		if value.DestinationLabels == listOfConn.DestinationLabels && value.DestinationNamespace == value.DestinationNamespace &&
+			value.Protocol == listOfConn.Protocol && value.Port == listOfConn.Port && value.Status == listOfConn.Status {
+			value.Count += netLog.Count
+			value.LastUpdatedTime = netLog.UpdatedTime
+			return list
+		}
+	}
+	listOfConn.Count = netLog.Count
+	listOfConn.LastUpdatedTime = netLog.UpdatedTime
+	list = append(list, &listOfConn)
+	return list
 }
