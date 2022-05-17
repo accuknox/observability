@@ -103,14 +103,25 @@ type CiliumFilter struct {
 }
 
 type NetworkSummary struct {
-	DestinationLabels string `json:"destination_labels"`
-	TrafficDirection  string `json:"traffic_direction"`
-	Count             int32  `json:"count"`
+	Verdict              string
+	DestinationLabels    string
+	DestinationNamespace string
+	Type                 string
+	L4TCPDestinationPort uint32
+	L4UDPDestinationPort uint32
+	L4ICMPv4Code         uint32
+	L4ICMPv6Code         uint32
+	L7DnsCnames          string
+	L7HttpMethod         string
+	TrafficDirection     string
+	UpdatedTime          int64
+	Count                int32
 }
 
 type SystemSummery struct {
-	Operation string `json:"operation"`
-	Source    string `json:"source"`
-	Resource  string `json:"resource"`
-	Count     int32  `json:"count"`
+	Operation   string
+	Source      string
+	Resource    string
+	UpdatedTime int64
+	Count       int32
 }

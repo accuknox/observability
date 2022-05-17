@@ -20,8 +20,8 @@ message LogsResponse {
     repeated ListOfSource listOfProcess = 3;
     repeated ListOfSource listOfFile = 4; 
     repeated ListOfSource listOfNetwork = 5;
-    ListOfConnection ingress = 6;
-    ListOfConnection egress = 7; 
+    repeated ListOfConnection ingress = 6;
+    repeated ListOfConnection egress = 7; 
 }
 
 message ListOfSource {
@@ -30,12 +30,18 @@ message ListOfSource {
 }
 
 message ListOfConnection {
-    int32 in = 1;
-    int32 out = 2;
+  string destinationLabels = 1;
+  string destinationNamespace = 2;
+  string protocol = 3;
+  uint32 port = 4;
+  int32 count = 5;
+  string status = 6;
+  int64 lastUpdatedTime = 7;
 }
 
 message ListOfDestination {
     string destination = 1;
     int32 count = 2;
     string status = 3;
+    int64 lastUpdatedTime = 4;
 }
