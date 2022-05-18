@@ -264,7 +264,7 @@ func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfCon
 
 	for _, value := range list {
 
-		if value.DestinationLabels == listOfConn.DestinationLabels && value.DestinationNamespace == value.DestinationNamespace &&
+		if value.DestinationLabels == listOfConn.DestinationLabels && value.DestinationNamespace == listOfConn.DestinationNamespace &&
 			value.Protocol == listOfConn.Protocol && value.Port == listOfConn.Port && value.Status == listOfConn.Status {
 			value.Count += netLog.Count
 			value.LastUpdatedTime = netLog.UpdatedTime
