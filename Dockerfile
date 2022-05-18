@@ -1,7 +1,7 @@
 FROM artifactory.accuknox.com/accuknox/golang:1.16.5-alpine3.14 AS builder
 WORKDIR /home/observability
 COPY . .
-RUN go mod tidy
+RUN go mod tidy -compat=1.17
 # RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 RUN apk add build-base
 RUN apk --no-cache add make git gcc libtool musl-dev ca-certificates dumb-init
