@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS builder
+FROM artifactory.accuknox.com/accuknox/golang:1.17.0-alpine AS builder
 WORKDIR /home/observability
 COPY . .
 RUN go mod tidy -compat=1.17
