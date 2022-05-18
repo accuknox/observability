@@ -4,7 +4,6 @@ import (
 	"errors"
 	"regexp"
 	"strings"
-	"sync"
 
 	sum "github.com/accuknox/observability/src/proto/summary"
 	"github.com/accuknox/observability/src/types"
@@ -56,7 +55,6 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for podName, sysLogs := range systemPods {
 
 		var listOfFile, listOfProcess, listOfNetwork []*sum.ListOfSource
-		// var ingressIn, ingressOut, egressIn, egressOut int32
 		//System Block
 		fileSource := make(map[string][]*sum.ListOfDestination)
 		processSource := make(map[string][]*sum.ListOfDestination)
@@ -64,7 +62,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 		// source := make(map[string]int32)
 		for _, sysLog := range sysLogs {
 			source := strings.Split(sysLog.Source, " ")[0]
-
+			//Checking System Operation that's File, Process and Network
 			switch sysLog.Operation {
 			case "File":
 				fileSource[source] = convertListofDestination(fileSource[source], sysLog)
@@ -98,31 +96,15 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 		}
 		var networkIngress, networkEgress []*sum.ListOfConnection
 		//Network Block
-		var wg sync.WaitGroup
 		for _, netLog := range networkPods[podName] {
-			wg.Add(1)
-			go func(netLog types.NetworkSummary) {
-				defer wg.Done()
-				switch netLog.TrafficDirection {
-				case "INGRESS":
-					// if netLog.DestinationLabels == "reserved:world" {
-					// 	ingressOut += netLog.Count
-					// } else {
-					// 	ingressIn += netLog.Count
-					// }
-					networkIngress = convertNetworkConnection(netLog, networkIngress)
-
-				case "EGRESS":
-					// if netLog.DestinationLabels == "reserved:world" {
-					// 	egressOut += netLog.Count
-					// } else {
-					// 	egressIn += netLog.Count
-					// }
-					networkEgress = convertNetworkConnection(netLog, networkEgress)
-				}
-			}(netLog)
+			//Check Traffic Direction is Ingress or Egress
+			switch netLog.TrafficDirection {
+			case "INGRESS":
+				networkIngress = convertNetworkConnection(netLog, networkIngress)
+			case "EGRESS":
+				networkEgress = convertNetworkConnection(netLog, networkEgress)
+			}
 		}
-		wg.Wait()
 		//Stream Block
 		if err := stream.Send(&sum.LogsResponse{
 			PodDetail:     podName,
