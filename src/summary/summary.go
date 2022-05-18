@@ -182,6 +182,10 @@ func networkRegex(str string) (string, error) {
 //convertListofDestination - Create the mapping between Source and Destination/Resource/Protocol
 func convertListofDestination(arr []*sum.ListOfDestination, sysLog types.SystemSummery) []*sum.ListOfDestination {
 	destination := aggregateFolder(sysLog.Resource)
+	//Check Operation is Network
+	if sysLog.Operation == "Network" {
+		destination, _ = networkRegex(sysLog.Resource)
+	}
 	for _, value := range arr {
 		if value.Destination == destination {
 			value.Count += sysLog.Count
