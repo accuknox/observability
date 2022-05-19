@@ -10,3 +10,5 @@ cilium:
   
 logging:
   level: "INFO"
+  
+#debug:
