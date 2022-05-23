@@ -236,9 +236,9 @@ func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfCon
 
 	//Find Status
 	switch netLog.Verdict {
-	case "FORWARDED":
+	case "FORWARDED", "REDIRECTED":
 		listOfConn.Status = "ALLOW"
-	case "DROPPED", "ERROR", "REDIRECTED":
+	case "DROPPED", "ERROR":
 		listOfConn.Status = "DENY"
 	case "AUDIT":
 		listOfConn.Status = "AUDIT"
