@@ -81,7 +81,6 @@ type summaryServer struct {
 
 //FetchLogs -  Service to fetch summary logs based on Pod level
 func (s *summaryServer) FetchLogs(in *sum.LogsRequest, stream sum.Summary_FetchLogsServer) error {
-
 	if err := summary.GetSummaryLogs(in, stream); err != nil {
 		return err
 	}
