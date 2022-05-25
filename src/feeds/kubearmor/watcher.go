@@ -2,6 +2,7 @@ package kubearmor
 
 import (
 	"context"
+	"encoding/json"
 
 	logger "github.com/accuknox/observability/src/logger"
 	"github.com/accuknox/observability/src/types"
@@ -29,34 +30,41 @@ func dialToKubeArmorService() (*grpc.ClientConn, error) {
 
 //GetWatchLogs - Watch Logs and Alerts
 func GetWatchLogs() (kubearmor.LogService_WatchLogsClient, kubearmor.LogService_WatchAlertsClient, error) {
-	var streamLog kubearmor.LogService_WatchLogsClient
-	var streamAlert kubearmor.LogService_WatchAlertsClient
+	var clientLog kubearmor.LogService_WatchLogsClient
+	var clientAlert kubearmor.LogService_WatchAlertsClient
 	//Connect KubeArmor Service
 	connection, err := dialToKubeArmorService()
 	if err != nil {
-		return streamLog, streamAlert, err
+		return clientLog, clientAlert, err
 	}
 	// defer connection.Close()
 	//Connect kubearmor log service client
-	client := kubearmor.NewLogServiceClient(connection)
+	serviceClientLog := kubearmor.NewLogServiceClient(connection)
 	//health check or try to connect until its connected
-	for healthCheck := HealthCheck(client); !healthCheck; {
+	for healthCheck := HealthCheck(serviceClientLog); !healthCheck; {
 		log.Info().Msg("Trying to connect to kubearmor service and get a log service client.")
-		client = kubearmor.NewLogServiceClient(connection)
-		healthCheck = HealthCheck(client)
+		serviceClientLog = kubearmor.NewLogServiceClient(connection)
+		healthCheck = HealthCheck(serviceClientLog)
+	}
+	serviceClientAlert := kubearmor.NewLogServiceClient(connection)
+	//health check or try to connect until its connected
+	for healthCheck := HealthCheck(serviceClientAlert); !healthCheck; {
+		log.Info().Msg("Trying to connect to kubearmor service and get a Alert service client.")
+		serviceClientAlert = kubearmor.NewLogServiceClient(connection)
+		healthCheck = HealthCheck(serviceClientAlert)
 	}
 	//Streaming the KubeArmor Logs
-	streamLog, err = client.WatchLogs(context.Background(), &kubearmor.RequestMessage{Filter: "system"})
+	clientLog, err = serviceClientLog.WatchLogs(context.Background(), &kubearmor.RequestMessage{Filter: "system"})
 	if err != nil {
 		log.Error().Msg("Error in watching kubearmor logs " + err.Error())
-		return streamLog, streamAlert, err
+		return clientLog, clientAlert, err
 	}
-	streamAlert, err = client.WatchAlerts(context.Background(), &kubearmor.RequestMessage{Filter: "policy"})
+	clientAlert, err = serviceClientAlert.WatchAlerts(context.Background(), &kubearmor.RequestMessage{Filter: "policy"})
 	if err != nil {
 		log.Error().Msg("Error in watching kubearmor alerts " + err.Error())
-		return streamLog, streamAlert, err
+		return clientLog, clientAlert, err
 	}
-	return streamLog, streamAlert, nil
+	return clientLog, clientAlert, nil
 }
 
 //HealthCheck - Health check of connection
@@ -82,46 +90,75 @@ func HealthCheck(client kubearmor.LogServiceClient) bool {
 	return false
 }
 
-func FetchLogs(stream interface{}) {
-
-	kubearmorLog := convertLog(stream)
-
-	// fmt.Println("\n\nKubeArmor Logs ===>>> ", kubearmorLog)
-	if kubearmorLog != (types.KubeArmorLogAlert{}) {
-
-		//Select Query to fetch ID
-		row := database.ConnectDB().QueryRow(constants.SELECT_KUBEARMOR, kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
-			kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
-			kubearmorLog.Data, kubearmorLog.Category, kubearmorLog.Action, kubearmorLog.Result)
-		//Store the ID
-		var id int
-		//Scan ID
-		row.Scan(&id)
-		//Check record is unique or not
-		if id != 0 {
-			//Prepare the update query statement
-			statement, err := database.ConnectDB().Prepare(constants.UPDATE_KUBEARMOR)
-			if err != nil {
-				log.Error().Msg("Error in Prepare Update KubeArmor statement: " + err.Error())
-				return
-			}
-			//Execute the update query statement
-			statement.Exec(kubearmorLog.Timestamp, id)
-			defer statement.Close()
-
-		} else {
-			//Prepare the insert query statement
-			statement, err := database.ConnectDB().Prepare(constants.INSERT_KUBEARMOR)
-			if err != nil {
-				log.Error().Msg("Error in Prepare Insert KubeArmor statement: " + err.Error())
-				return
-			}
-			//Execute the insert query statement
-			statement.Exec(kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
-				kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
-				kubearmorLog.Data, kubearmorLog.Category, kubearmorLog.Action, kubearmorLog.Timestamp, kubearmorLog.Timestamp, kubearmorLog.Result)
-
-			defer statement.Close()
+//FetchAlert - Call FetchLogs
+func FetchAlert(stream kubearmor.LogService_WatchAlertsClient) {
+	for {
+		var kubeArmorAlert types.KubeArmorLogAlert
+		logs, err := stream.Recv()
+		if err != nil {
+			log.Error().Msg("Error in receiving kubearmor alert " + err.Error())
+			return
 		}
+
+		jsonLog, _ := json.Marshal(logs)
+		err = json.Unmarshal(jsonLog, &kubeArmorAlert)
+		kubeArmorAlert.Category = "Alert"
+		// fmt.Println("\n\nKubeArmor Alert ===>>> ", kubearmorLog)
+		AggregateLogs(kubeArmorAlert)
+	}
+}
+
+//FetchLogs - Convert Aggregate the Logs and Alert and Store into DB
+func FetchLogs(stream kubearmor.LogService_WatchLogsClient) {
+	for {
+		var kubeArmorLog types.KubeArmorLogAlert
+		logs, err := stream.Recv()
+		if err != nil {
+			log.Error().Msg("Error in receiving kubearmor log " + err.Error())
+			return
+		}
+		jsonLog, _ := json.Marshal(logs)
+		err = json.Unmarshal(jsonLog, &kubeArmorLog)
+		kubeArmorLog.Action = "Allow"
+		kubeArmorLog.Category = "Log"
+		// fmt.Println("\n\nKubeArmor Logs ===>>> ", kubearmorLog)
+		AggregateLogs(kubeArmorLog)
+	}
+}
+
+func AggregateLogs(kubearmorLog types.KubeArmorLogAlert) {
+	//Select Query to fetch ID
+	row := database.ConnectDB().QueryRow(constants.SELECT_KUBEARMOR, kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
+		kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
+		kubearmorLog.Data, kubearmorLog.Category, kubearmorLog.Action, kubearmorLog.Result)
+	//Store the ID
+	var id int
+	//Scan ID
+	row.Scan(&id)
+	//Check record is unique or not
+	if id != 0 {
+		//Prepare the update query statement
+		statement, err := database.ConnectDB().Prepare(constants.UPDATE_KUBEARMOR)
+		if err != nil {
+			log.Error().Msg("Error in Prepare Update KubeArmor statement: " + err.Error())
+			return
+		}
+		//Execute the update query statement
+		statement.Exec(kubearmorLog.Timestamp, id)
+		defer statement.Close()
+
+	} else {
+		//Prepare the insert query statement
+		statement, err := database.ConnectDB().Prepare(constants.INSERT_KUBEARMOR)
+		if err != nil {
+			log.Error().Msg("Error in Prepare Insert KubeArmor statement: " + err.Error())
+			return
+		}
+		//Execute the insert query statement
+		statement.Exec(kubearmorLog.ClusterName, kubearmorLog.HostName, kubearmorLog.NamespaceName, kubearmorLog.PodName, kubearmorLog.ContainerID, kubearmorLog.ContainerName,
+			kubearmorLog.UID, kubearmorLog.Type, kubearmorLog.Source, kubearmorLog.Operation, kubearmorLog.Resource, kubearmorLog.Labels,
+			kubearmorLog.Data, kubearmorLog.Category, kubearmorLog.Action, kubearmorLog.Timestamp, kubearmorLog.Timestamp, kubearmorLog.Result)
+
+		defer statement.Close()
 	}
 }

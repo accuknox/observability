@@ -6,7 +6,6 @@ import (
 	"github.com/accuknox/observability/src/feeds/hubble"
 	"github.com/accuknox/observability/src/feeds/kubearmor"
 	logger "github.com/accuknox/observability/src/logger"
-	"github.com/cilium/cilium/api/v1/observer"
 	"github.com/rs/zerolog"
 )
 
@@ -36,36 +35,24 @@ func startConsumer() {
 		return
 	}
 
-	run := true
-	for run {
-		select {
-		case <-stopChan:
-			log.Info().Msgf("Got a signal to terminate the consumer")
-			run = false
-		default:
-			hubbleLog, err := hubbleClient.Recv()
-			if err != nil {
-				log.Error().Msg("Error in receiving hubble log " + err.Error())
-				return
-			}
-			// fmt.Println("\n\nHubble Logs ===>>> ", hubbleLog)
-			hubbleChan := make(chan *observer.GetFlowsResponse)
+	// run := true
+	// for run {
+	select {
+	case <-stopChan:
+		log.Info().Msgf("Got a signal to terminate the consumer")
+		// run = false
+	default:
 
-			//Aggregate Network Logs
-			go hubble.FetchLogs(hubbleChan)
+		//Aggregate Network Logs
+		go hubble.FetchLogs(hubbleClient)
 
-			hubbleChan <- hubbleLog
+		//Aggregate System Logs
+		go kubearmor.FetchLogs(kubearmorLogClient)
 
-			//Aggregate System Logs
-			kubearmor.FetchLogs(kubearmorLogClient)
-
-			//Aggregate System Alert
-			go kubearmor.FetchLogs(kubearmorAlertClient)
-
-		}
+		//Aggregate System Alert
+		go kubearmor.FetchAlert(kubearmorAlertClient)
 
 	}
-	log.Info().Msgf("Closing consumer")
 
 }
 
