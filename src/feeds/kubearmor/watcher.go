@@ -3,7 +3,6 @@ package kubearmor
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	logger "github.com/accuknox/observability/src/logger"
 	"github.com/accuknox/observability/src/types"
@@ -104,7 +103,7 @@ func FetchAlert(stream kubearmor.LogService_WatchAlertsClient) {
 		jsonLog, _ := json.Marshal(logs)
 		err = json.Unmarshal(jsonLog, &kubeArmorAlert)
 		kubeArmorAlert.Category = "Alert"
-		fmt.Println("\n\nKubeArmor Alert ===>>> ", kubeArmorAlert)
+		// fmt.Println("\n\nKubeArmor Alert ===>>> ", kubeArmorAlert)
 		AggregateLogs(kubeArmorAlert)
 	}
 }
