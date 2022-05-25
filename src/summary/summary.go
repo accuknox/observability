@@ -2,7 +2,6 @@ package summary
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 
 //GetSummaryLogs - Give Summary logs of Pod based on Label and Namespace Input
 func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServer) error {
-	fmt.Println("Get Summary Log Called")
+	log.Info().Msg("Get Summary Log Called")
 	systemPods := make(map[string][]types.SystemSummery)
 	networkPods := make(map[string][]types.NetworkSummary)
 	//Fetch network Logs
@@ -170,7 +169,7 @@ func convertListofDestination(arr []*sum.ListOfDestination, sysLog types.SystemS
 		destination, _ = networkRegex(sysLog.Resource)
 	}
 	for _, value := range arr {
-		if value.Destination == destination {
+		if value.Destination == destination && value.Status == sysLog.Action {
 			value.Count += sysLog.Count
 			value.LastUpdatedTime = sysLog.UpdatedTime
 			return arr
