@@ -71,6 +71,8 @@ const (
 		"resource" TEXT,
 		"labels" TEXT,
 		"data" TEXT,
+		"category" TEXT,
+		"action" TEXT,
 		"start_time" INTEGER,
 		"updated_time" INTEGER,
 		"result" TEXT,
@@ -79,7 +81,7 @@ const (
   	)`
 	INSERT_KUBEARMOR = `INSERT INTO kubearmor_logs (cluster_name,host_name,namespace_name,
 		pod_name,container_id,container_name,uid,type,source,operation,
-		resource,labels,data,start_time,updated_time,result,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`
+		resource,labels,data,category,action,start_time,updated_time,result,total) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`
 	INSERT_CILIUM = `INSERT INTO cilium_logs (verdict,
 		ip_source,ip_destination,ip_version,ip_encrypted,
 		l4_tcp_source_port,l4_tcp_destination_port,
@@ -102,7 +104,7 @@ const (
 
 	SELECT_KUBEARMOR = `SELECT ID FROM kubearmor_logs WHERE cluster_name = ? and host_name = ? and namespace_name = ? and 
 	pod_name = ? and container_id = ? and container_name = ? and uid = ? and type = ? and source = ? and operation = ? and 
-	resource = ? and label = ? and data  = ? and result = ?`
+	resource = ? and labels = ? and data  = ? and category = ? and action = ? and result = ?`
 
 	SELECT_CILIUM = `SELECT ID FROM cilium_logs WHERE verdict = ? and 
 		ip_source = ? and ip_destination = ? and ip_version = ? and ip_encrypted = ? and 

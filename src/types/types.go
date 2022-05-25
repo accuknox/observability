@@ -122,6 +122,35 @@ type SystemSummery struct {
 	Operation   string
 	Source      string
 	Resource    string
+	Action      string
 	UpdatedTime int64
 	Count       int32
+}
+
+type KubeArmorLogAlert struct {
+	Timestamp         int64  `json:"Timestamp,omitempty"`
+	UpdatedTime       string `json:"UpdatedTime,omitempty"`
+	ClusterName       string `json:"ClusterName,omitempty"`
+	HostName          string `json:"HostName,omitempty"`
+	NamespaceName     string `json:"NamespaceName,omitempty"`
+	PodName           string `json:"PodName,omitempty"`
+	Labels            string `json:"Labels,omitempty"`
+	ContainerID       string `json:"ContainerID,omitempty"`
+	ContainerName     string `json:"ContainerName,omitempty"`
+	ContainerImage    string `json:"ContainerImage,omitempty"`
+	ParentProcessName string `json:"ParentProcessName,omitempty"`
+	ProcessName       string `json:"ProcessName,omitempty"`
+	HostPPID          int32  `json:"HostPPID,omitempty"`
+	HostPID           int32  `json:"HostPID,omitempty"`
+	PPID              int32  `json:"PPID,omitempty"`
+	PID               int32  `json:"PID,omitempty"`
+	UID               int32  `json:"UID,omitempty"`
+	Type              string `json:"Type,omitempty"`
+	Source            string `json:"Source,omitempty"`
+	Operation         string `json:"Operation,omitempty"`
+	Resource          string `json:"Resource,omitempty"`
+	Data              string `json:"Data,omitempty"`
+	Action            string `json:"Action,omitempty"`
+	Result            string `json:"Result,omitempty"`
+	Category          string `json:"Category,omitempty"`
 }

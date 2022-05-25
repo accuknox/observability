@@ -36,7 +36,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	}
 
 	//Fetch System Logs
-	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource,updated_time,total from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
+	rows, err = database.ConnectDB().Query("select pod_name,operation,source,resource,action,updated_time,total from kubearmor_logs where labels like \"%"+pbRequest.Label+"%\" and namespace_name = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in System Logs :" + err.Error())
 		return errors.New("error in Connecting system logs table")
@@ -45,7 +45,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for rows.Next() {
 		var podName string
 		var syslog types.SystemSummery
-		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource, &syslog.UpdatedTime, &syslog.Count); err != nil {
+		if err := rows.Scan(&podName, &syslog.Operation, &syslog.Source, &syslog.Resource, &syslog.Action, &syslog.UpdatedTime, &syslog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return errors.New("error in scanning system logs table")
 		}
@@ -178,7 +178,7 @@ func convertListofDestination(arr []*sum.ListOfDestination, sysLog types.SystemS
 	arr = append(arr, &sum.ListOfDestination{
 		Destination:     destination,
 		Count:           sysLog.Count,
-		Status:          "ALLOW",
+		Status:          strings.ToUpper(sysLog.Action),
 		LastUpdatedTime: sysLog.UpdatedTime,
 	})
 	return arr
