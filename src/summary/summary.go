@@ -178,7 +178,7 @@ func convertListofDestination(arr []*sum.ListOfDestination, sysLog types.SystemS
 	arr = append(arr, &sum.ListOfDestination{
 		Destination:     destination,
 		Count:           sysLog.Count,
-		Status:          strings.ToUpper(sysLog.Action),
+		Status:          sysLog.Action,
 		LastUpdatedTime: sysLog.UpdatedTime,
 	})
 	return arr
