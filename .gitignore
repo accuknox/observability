@@ -19,4 +19,4 @@ go.sum
 log/
 bin/
 
-*.db
+*.db*
