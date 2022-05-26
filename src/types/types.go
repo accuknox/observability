@@ -107,7 +107,9 @@ type NetworkSummary struct {
 	DestinationLabels    string
 	DestinationNamespace string
 	Type                 string
+	L4TCPSourcePort      uint32
 	L4TCPDestinationPort uint32
+	L4UDPSourcePort      uint32
 	L4UDPDestinationPort uint32
 	L4ICMPv4Code         uint32
 	L4ICMPv6Code         uint32

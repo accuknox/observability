@@ -17,7 +17,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	systemPods := make(map[string][]types.SystemSummery)
 	networkPods := make(map[string][]types.NetworkSummary)
 	//Fetch network Logs
-	rows, err := database.ConnectDB().Query("select source_pod_name, verdict, destination_labels, destination_namespace, type, l4_tcp_destination_port, l4_udp_destination_port, l4_icmpv4_code, l4_icmpv6_code,l7_dns_cnames,l7_http_method, traffic_direction, updated_time, total from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
+	rows, err := database.ConnectDB().Query("select source_pod_name, verdict, destination_labels, destination_namespace, type, l4_tcp_source_port, l4_tcp_destination_port, l4_udp_source_port, l4_udp_destination_port, l4_icmpv4_code, l4_icmpv6_code,l7_dns_cnames,l7_http_method, traffic_direction, updated_time, total from cilium_logs where source_labels like \"%"+pbRequest.Label+"%\" and source_namespace = ?", pbRequest.Namespace)
 	if err != nil {
 		log.Error().Msg("Error in Connection in Network Logs :" + err.Error())
 		return err
@@ -27,7 +27,7 @@ func GetSummaryLogs(pbRequest *sum.LogsRequest, stream sum.Summary_FetchLogsServ
 	for rows.Next() {
 		var netLog types.NetworkSummary
 		var podName string
-		if err := rows.Scan(&podName, &netLog.Verdict, &netLog.DestinationLabels, &netLog.DestinationNamespace, &netLog.Type, &netLog.L4TCPDestinationPort, &netLog.L4UDPDestinationPort, &netLog.L4ICMPv4Code, &netLog.L4ICMPv6Code, &netLog.L7DnsCnames, &netLog.L7HttpMethod, &netLog.TrafficDirection, &netLog.UpdatedTime, &netLog.Count); err != nil {
+		if err := rows.Scan(&podName, &netLog.Verdict, &netLog.DestinationLabels, &netLog.DestinationNamespace, &netLog.Type, &netLog.L4TCPSourcePort, &netLog.L4TCPDestinationPort, &netLog.L4UDPSourcePort, &netLog.L4UDPDestinationPort, &netLog.L4ICMPv4Code, &netLog.L4ICMPv6Code, &netLog.L7DnsCnames, &netLog.L7HttpMethod, &netLog.TrafficDirection, &netLog.UpdatedTime, &netLog.Count); err != nil {
 			log.Error().Msg("Error in Scan system Logs : " + err.Error())
 			return err
 		}
@@ -214,19 +214,32 @@ func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfCon
 	listOfConn.DestinationLabels = netLog.DestinationLabels
 	listOfConn.DestinationNamespace = netLog.DestinationNamespace
 
+	var portTCP, portUDP uint32
+	//Based on Traffic Direction assign SourcePort or Destination Port
+	switch netLog.TrafficDirection {
+	case "INGRESS":
+		portTCP = netLog.L4TCPSourcePort
+		portUDP = netLog.L4UDPSourcePort
+	case "EGRESS":
+		portTCP = netLog.L4TCPDestinationPort
+		portUDP = netLog.L4UDPDestinationPort
+	}
+	//Check Protocol Type
 	if netLog.L4TCPDestinationPort != 0 {
-		listOfConn.Port = netLog.L4TCPDestinationPort
+
+		listOfConn.Port = portTCP
 		if netLog.L7HttpMethod != "" {
 			listOfConn.Protocol = "HTTP"
 		} else {
 			listOfConn.Protocol = "TCP"
 		}
 	} else if netLog.L4UDPDestinationPort != 0 {
-		listOfConn.Port = netLog.L4UDPDestinationPort
+
+		listOfConn.Port = portUDP
 		if netLog.L7DnsCnames != "" {
 			listOfConn.Protocol = "DNS"
 		} else {
-			listOfConn.Protocol = "TCP"
+			listOfConn.Protocol = "UDP"
 		}
 	} else if netLog.L4ICMPv4Code != 0 {
 		listOfConn.Protocol = "ICMPv4"
@@ -234,7 +247,7 @@ func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfCon
 		listOfConn.Protocol = "ICMPv6"
 	}
 
-	//Find Status
+	//Convert Status based on Verdict
 	switch netLog.Verdict {
 	case "FORWARDED", "REDIRECTED":
 		listOfConn.Status = "ALLOW"
@@ -245,7 +258,6 @@ func convertNetworkConnection(netLog types.NetworkSummary, list []*sum.ListOfCon
 	}
 
 	for _, value := range list {
-
 		if value.DestinationLabels == listOfConn.DestinationLabels && value.DestinationNamespace == listOfConn.DestinationNamespace &&
 			value.Protocol == listOfConn.Protocol && value.Port == listOfConn.Port && value.Status == listOfConn.Status {
 			value.Count += netLog.Count
