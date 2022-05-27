@@ -25,5 +25,3 @@ builds:
       - amd64
       - arm64
     ldflags:  -linkmode external -extldflags '-static' -s -w
-    env:
-      - CGO_ENABLED=0
