@@ -83,7 +83,7 @@ anchore_properties:
 #***********************************************************************************************************************************#
 sonar_properties:
   status:
-    enabled: "true"
+    enabled: "false"
   quality_gate:
     enabled: "false"
     timeout: "3"
