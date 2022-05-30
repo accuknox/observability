@@ -23,7 +23,6 @@ builds:
       - linux
     goarch:
       - amd64
-      - arm64
-    ldflags: -extld=aarch64-linux-gnu-gcc
+    ldflags: -linkmode external -extldflags '-static' -s -w
 #     env:
 #       - CGO_ENABLED=1
